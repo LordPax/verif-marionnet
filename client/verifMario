@@ -1,0 +1,51 @@
+#!/bin/bash
+
+if [[ $EUID -ne 0 ]]; then
+   echo "Ce script doit être executé en tant que root (par exemple, avec sudo)" 
+   exit 1
+fi
+
+packages="zenity"
+
+name=""
+firstName=""
+idExam=""
+
+function installDep() {
+    echo "Searching for dependance ..."
+    for p in $packages; do
+        if [[ $(command -v $p | wc -l) -eq 1 ]]; then
+            echo "Package $p found"
+        else
+            echo "Installing $p ..."
+            apt install $p
+        fi
+    done
+}
+
+function input() {
+    while [[ "A$name" = "A" ]]; do
+        read -p "Enter your name : " name
+    done
+    while [[ "A$firstName" = "A" ]]; do
+        read -p "Enter your first name : " firstName
+    done
+    while [[ "A$idExam" = "A" ]]; do
+        read -p "Enter your exam id : " idExam
+    done
+    
+    #echo "$name $firstName $idExam"
+}
+
+function verifDeamon() {
+    if [[ $(ps aux | grep marionnet | grep daemon | wc -l) -eq 1 ]]; then
+        echo "Marionnet daemon is already running"
+    else
+        /etc/init.d/marionnet-daemon start
+        echo "Marionnet daemon stared"
+    fi
+}
+
+installDep
+input
+verifDeamon
