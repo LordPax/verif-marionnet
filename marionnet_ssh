@@ -8,7 +8,7 @@
 # ----------------
 
 cde=$0
-PRIVATE_RSA_KEY=id_rsa_marionnet
+PRIVATE_RSA_KEY=~/.ssh/id_rsa_marionnet
 
 # we need more checks
 #-- Checks
