@@ -5,6 +5,9 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+# distrib=$(lsb_release -i | cut -d : -f 2)
+distrib=""
+
 packages="zenity wget ssh"
 urlFile=""
 
@@ -15,7 +18,8 @@ idExam=""
 function installDep() {
     echo "Searching for dependance ..."
     for p in $packages; do
-        if [[ $(command -v $p | wc -l) -eq 1 ]]; then
+        res=$(command -v $p | wc -l)
+        if [[ $res -eq 1 ]]; then
             echo "Package $p found"
         else
             echo "Installing $p ..."
@@ -34,12 +38,11 @@ function input() {
     while [[ "A$idExam" = "A" ]]; do
         read -p "Enter your exam id : " idExam
     done
-    
-    #echo "$name $firstName $idExam"
 }
 
 function verifDeamon() {
-    if [[ $(ps aux | grep marionnet | grep daemon | wc -l) -eq 1 ]]; then
+    res=$(ps aux | grep marionnet | grep daemon | wc -l)
+    if [[ $res -eq 1 ]]; then
         echo "Marionnet daemon is already running"
     else
         /etc/init.d/marionnet-daemon start
@@ -50,17 +53,17 @@ function verifDeamon() {
 function getMarionetFile() {
     echo "Downloading marionnet file"
     wget $urlFile
-    filename="something"
+    filename=$(echo $urlFile | grep -o "[^/]*$" )
     if [[ -d $filename ]]; then
-        echo "Starting marionnet"
-        marionnet $marionnetFile
+        echo "Starting marionnet ..."
+        marionnet $filename &
     else
         echo "Marionnet file does not exist"
     fi
 }
 
-# installDep
-# verifDeamon
-# input
+installDep
+verifDeamon
+input
 getMarionetFile
 
