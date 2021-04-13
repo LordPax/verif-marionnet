@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# ---------------- 
+# marionnet_ssh vm_mario command
+# -- VM must be running and have an ssh server running inside.
+#
+# GNU Public License 3, Franck Butelle 2021
+# ----------------
+
+cde=$0
+PRIVATE_RSA_KEY=id_rsa_marionnet
+
+# we need more checks
+#-- Checks
+if [ "A$2" = "A" ]; then
+	echo "Usage: $cde  host cmd"
+	echo "where host is the name of a virtual machine in marionnet"
+	exit 1
+fi
+
+if [ "A$TMPDIR" = "A" ]; then
+	TMPDIR=/tmp
+fi
+
+resu=`ls -d $TMPDIR/marionnet-*.dir 2> /dev/null`
+if [ "A$resu" = "A" ]; then
+	echo "ERROR: No marionnet dir found in $TMPDIR, is it running ?"
+	exit 1
+fi
+if [ `echo $resu | wc -l` -gt 1 ]; then
+	echo "ERROR: more than one instance of marionnet detected, may be
+	something wrong happened to some of them ?"
+	echo "Please correct this first !"
+	exit 1
+fi
+
+Host="$1"
+shift
+Cmd="$*"
+
+resu=`ps aw |grep marionnet|grep "hostname=$Host "|head -1|sed -e 's/^.* eth42=\([^ ]*\) .*$/\1/'`'/'
+if [ "$resu" = "/" ] ; then
+	echo "ERROR : machine $Host not found in current marionnet project"
+	exit 1
+fi
+
+echo $resu
+
+tap=`echo $resu | cut -d ',' -f 2`
+echo $tap
+
+if [ "A$tap" = "A" ]; then
+	echo "ERROR: no tap found"
+	exit 1
+fi
+
+ip=`/sbin/route -n |grep $tap |cut -d ' ' -f 1`
+echo $ip
+
+ssh -xq -i $PRIVATE_RSA_KEY root@$ip $Cmd
