@@ -1,19 +1,21 @@
 #!/bin/bash
 
-if [[ $EUID -ne 0 ]]; then
-   echo "You must be root to run this script" 
-   exit 1
-fi
+# if [[ $EUID -ne 0 ]]; then
+#    echo "You must be root to run this script" 
+#    exit 1
+# fi
 
 # distrib=$(lsb_release -i | cut -d : -f 2)
 distrib=""
 
 packages="zenity wget ssh"
-urlFile=""
+urlFile="http://www-info.iutv.univ-paris13.fr/~gauthier/test2.mar"
+urlSsh="http://www-info.iutv.univ-paris13.fr/~gauthier/id_rsa_marionnet"
 
 name=""
 firstName=""
 idExam=""
+choice=""
 
 function installDep() {
     echo "Searching for dependance ..."
@@ -23,17 +25,17 @@ function installDep() {
             echo "Package $p found"
         else
             echo "Installing $p ..."
-            apt install $p
+            sudo apt install $p
         fi
     done
 }
 
 function input() {
-    while [[ "A$name" = "A" ]]; do
-        read -p "Enter your name : " name
-    done
     while [[ "A$firstName" = "A" ]]; do
         read -p "Enter your first name : " firstName
+    done
+    while [[ "A$name" = "A" ]]; do
+        read -p "Enter your name : " name
     done
     while [[ "A$idExam" = "A" ]]; do
         read -p "Enter your exam id : " idExam
@@ -45,25 +47,56 @@ function verifDeamon() {
     if [[ $res -eq 1 ]]; then
         echo "Marionnet daemon is already running"
     else
-        /etc/init.d/marionnet-daemon start
-        echo "Marionnet daemon stared"
+        sudo /etc/init.d/marionnet-daemon start
+        echo "Marionnet daemon started"
     fi
 }
 
 function getMarionetFile() {
-    echo "Downloading marionnet file"
-    wget $urlFile
     filename=$(echo $urlFile | grep -o "[^/]*$" )
-    if [[ -d $filename ]]; then
-        echo "Starting marionnet ..."
-        marionnet $filename &
+
+    if [[ ! -f $filename ]]; then
+        echo "Downloading marionnet file ..."
+        wget -nv $urlFile
+    fi
+    
+    if [[ -f $filename ]]; then
+        res=$(ps aux | grep marionnet | grep $filename | wc -l)
+        if [[ $res -eq 0 ]]; then 
+            marionnet $filename &
+            echo "Marionnet started"
+        else
+            echo "Marionnet already started"
+        fi
     else
         echo "Marionnet file does not exist"
+        exit 1
     fi
+}
+
+function evaluation() {
+    echo "do something"
+    # ../marionnet_list
+}
+
+function examMode() {
+    echo "exam mode"
+}
+
+function loop() {
+    while [[ $choice != "n" ]]; do
+        choice=""
+        while [[ "A$choice" = "A" ]] || [[ $choice != "y" ]] && [[ $choice != "n" ]]; do
+            read -p "Would you like to be evaluated (y/n) : " choice
+        done
+        if [[ $choice = "y" ]]; then
+            evaluation
+        fi
+    done
 }
 
 installDep
 verifDeamon
 input
 getMarionetFile
-
+loop
