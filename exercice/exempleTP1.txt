@@ -1,0 +1,12 @@
+Dans ce TP on utilisera que des machines virtuelles debian-wheezy.
+Merci de bien respecter le nom des machines et du routeur.
+
+Faire un réseau avec un routeur nommé R1 reliant deux réseaux
+ (eth0 à "gauche" d'adresse IP 10.0.0.254/16, eth1 à "droite" d'adresse IP 11.0.1.254/24). 
+Le réseau de gauche comporte un switch et la machine m1, 
+le réseau de droite comporte un hub et la machine m2.
+
+Donnez des adresses IP cohérentes de sorte que l'on puisse faire un ping de m1 à m2.
+
+Le service web doit être ensuite démarré sur la machine M2 (par la commande service)
+

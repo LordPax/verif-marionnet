@@ -1,21 +1,21 @@
 #!/bin/bash
 
-# if [[ $EUID -ne 0 ]]; then
-#    echo "You must be root to run this script" 
-#    exit 1
-# fi
-
 # distrib=$(lsb_release -i | cut -d : -f 2)
 distrib=""
 
 packages="zenity wget ssh"
-urlFile="http://www-info.iutv.univ-paris13.fr/~gauthier/test2.mar"
+urlProjectFile="http://www-info.iutv.univ-paris13.fr/~gauthier/example_TP1.mar"
+urlRequestFile="http://www-info.iutv.univ-paris13.fr/~gauthier/exempleTP1_requetes.txt"
 urlSsh="http://www-info.iutv.univ-paris13.fr/~gauthier/id_rsa_marionnet"
+
+scripts="http://www-info.iutv.univ-paris13.fr/~gauthier/marionnet_getVar http://www-info.iutv.univ-paris13.fr/~gauthier/marionnet_list http://www-info.iutv.univ-paris13.fr/~gauthier/marionnet_ssh"
 
 name=""
 firstName=""
 idExam=""
 choice=""
+
+declare -A dataRequest
 
 function installDep() {
     echo "Searching for dependance ..."
@@ -26,6 +26,26 @@ function installDep() {
         else
             echo "Installing $p ..."
             sudo apt install $p
+        fi
+    done
+}
+
+function downloadScript() {
+    if [[ ! -d script ]]; then
+        mkdir script
+        echo "script/ created"
+    fi
+    local name=""
+    for sc in $scripts; do
+        name=$(echo $sc | grep -o "[^/]*$" )
+        if [[ ! -f script/$name ]]; then
+            echo "Downloading $name in script/ ..."
+            cd script
+            wget -nv $sc
+            chmod +x $name
+            cd ..
+        else
+            echo "$name already exist"
         fi
     done
 }
@@ -43,7 +63,7 @@ function input() {
 }
 
 function verifDeamon() {
-    res=$(ps aux | grep marionnet | grep daemon | wc -l)
+    res=$(ps aux | grep marionnet | grep daemon.native | wc -l)
     if [[ $res -eq 1 ]]; then
         echo "Marionnet daemon is already running"
     else
@@ -53,30 +73,53 @@ function verifDeamon() {
 }
 
 function getMarionetFile() {
-    filename=$(echo $urlFile | grep -o "[^/]*$" )
+    projectName=$(echo $urlProjectFile | grep -o "[^/]*$" )
+    requestName=$(echo $urlRequestFile | grep -o "[^/]*$" )
 
-    if [[ ! -f $filename ]]; then
-        echo "Downloading marionnet file ..."
-        wget -nv $urlFile
+    if [[ ! -f $projectName ]]; then
+        echo "Downloading project file ..."
+        wget -nv $urlProjectFile
+    fi
+
+    if [[ ! -f $requestName ]]; then
+        echo "Downloading request file ..."
+        wget -nv $urlRequestFile
     fi
     
-    if [[ -f $filename ]]; then
-        res=$(ps aux | grep marionnet | grep $filename | wc -l)
+    if [[ -f $projectName ]]; then
+        res=$(ps aux | grep marionnet | grep $projectName | wc -l)
         if [[ $res -eq 0 ]]; then 
-            marionnet $filename &
+            marionnet $projectName &
             echo "Marionnet started"
         else
-            echo "Marionnet already started"
+            echo "Marionnet already running"
         fi
     else
-        echo "Marionnet file does not exist"
+        echo "Marionnet project does not exist"
         exit 1
     fi
 }
 
+function parseRequest() {
+    echo "Parsing request ..."
+    nbLine=$(cat $requestName | grep '^[^#]' | wc -l)
+
+    for i in $(seq 1 $nbLine); do
+        for j in {1..5}; do
+            dataRequest[$i,$j]=$(cat $requestName | grep '^[^#]' | sed -n "${i}p" | cut -d ';' -f $j)
+        done
+    done
+
+    echo "$nbLine request found"
+}
+
 function evaluation() {
-    echo "do something"
-    # ../marionnet_list
+    echo "Evaluation in progress ..."
+    parseRequest
+
+    for i in $(seq 1 $nbLine); do
+        echo "${dataRequest[$i,1]} : $(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | grep -o ${dataRequest[$i,4]})"
+    done
 }
 
 function examMode() {
@@ -91,11 +134,14 @@ function loop() {
         done
         if [[ $choice = "y" ]]; then
             evaluation
+        else
+            echo "Good bye"
         fi
     done
 }
 
 installDep
+downloadScript
 verifDeamon
 input
 getMarionetFile
