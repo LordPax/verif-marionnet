@@ -113,7 +113,7 @@ function parseRequest() {
     done
     
     local pName=$(echo $projectName | cut -d . -f 1)
-    cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/\1 - \2/')
+    cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/\1 - \2/' | tr -d '\n')
 
     echo "$nbLine request found"
 }
@@ -138,6 +138,7 @@ function sendData() {
         send="$send\"${data[$i]}\","
     done
     
+    # send="$send\"${data[$nbLine]}\"]}"
     send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\"}"
     
     echo $send
