@@ -1,0 +1,44 @@
+# Fichier requetes
+# Syntaxe : nom_test ; machine ; commande; regexp du résultat attendu; bareme
+# si pas de machine alors signifie hors de marionnet.
+
+# verif IP routeur R1 eth0 
+ip_R1_eth0; R1; /sbin/ifconfig eth0  |grep 'inet ' | sed -e 's/^[ ]*inet \([^ ]*\) .*$/\1/'; 10\.0\.0\.254 ; 1
+
+# verif mask IP routeur R1 eth0 
+mask_R1_eth0;R1; /sbin/ifconfig eth0 |grep 'netmask ' | sed -e 's/^[ ]*Mask:\([^ ]*\)$/\1/';255\.255\.0\.0 ; 1
+
+# vérif IP R1 eth1 
+ip_R1_eth1;R1; /sbin/ifconfig eth1 |grep 'inet ' | sed -e 's/^[ ]*inet \([^ ]*\) .*$/\1/'; 11\.0\.1\.254 ; 1
+
+# verif mask IP routeur R1 eth1 
+mask_R1_eth1; R1; /sbin/ifconfig eth1 |grep 'netmask ' | sed -e 's/^[ ]*Mask:\([^ ]*\)$/\1/';255\.255\.255\.0
+
+# vérif ip M1 dans 10.0.0.0/16 (écrire un outil ?)
+ip_m1 ; m1; /sbin/ifconfig eth0 |grep 'inet addr:' | sed -e 's/^[ ]*inet addr:\([^ ]*\) .*$/\1/'; 10\.0\..* ; 1
+# vérif masque de M1
+mask_m1 ; m1; /sbin/ifconfig eth0 |grep 'Mask:' | sed -e 's/^[ ]*Mask:\([^ ]*\)$/\1/';255\.255\.0\.0 ; 1
+
+# vérif ip M2 dans 11.0.1.0/24 (écrire un outil ?)
+ip_m2 ; m2; /sbin/ifconfig eth0 |grep 'inet ' | sed -e 's/^[ ]*inet \([^ ]*\) .*$/\1/'; 11\.0\.1\..* ; 1
+# vérif masque de M2
+mask_m2; m2; /sbin/ifconfig eth0 |grep 'Mask:' | sed -e 's/^[ ]*Mask:\([^ ]*\)$/\1/';255\.255\.255\.0 ; 1
+
+# problème : comment tester que c'est bien un switch à gauche et un hub à droite
+# il faudrait au moins un moyen de vérifier qu'ils sont présents?
+# un truc genre :
+#test_switch;; $(test_presence switch) && echo ok ; ok ; 1
+#test_hub;; $(test_presence hub) && echo ok ; ok ; 1
+# Il faudrait un moyen de vérifier cable droit vs cable croisé !
+# en attendant juste un ping avec délai max d'1 s 
+# avec le routeur
+pingM1;m1; ping -c 1 -w 1 10.0.0.254 > /dev/null && echo ok ; ok ; 1
+
+pingM2;m2; ping -c 1 -w 1 11.0.1.254 > /dev/null && echo ok ; ok ; 1
+
+# il faudrait trouver le moyen de récupérer l'adresse IP de M2 pour
+# le test ping de bout en bout, qq chose comme:
+#pingM1aM2;m1; ping -c 1 -w 1 $(adresseIP m2) > /dev/null && echo ok ; ok ; 1
+
+# Verification service par netstat par défaut bareme de 1
+webM2;m2;netstat -ant  |grep -q '0.0.0.0:80' && echo ok ; ok 

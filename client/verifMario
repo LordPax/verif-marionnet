@@ -7,6 +7,7 @@ packages="zenity wget ssh"
 urlProjectFile="http://www-info.iutv.univ-paris13.fr/~gauthier/example_TP1.mar"
 urlRequestFile="http://www-info.iutv.univ-paris13.fr/~gauthier/exempleTP1_requetes.txt"
 urlSsh="http://www-info.iutv.univ-paris13.fr/~gauthier/id_rsa_marionnet"
+serverUrl="localhost"
 
 scripts="http://www-info.iutv.univ-paris13.fr/~gauthier/marionnet_getVar http://www-info.iutv.univ-paris13.fr/~gauthier/marionnet_list http://www-info.iutv.univ-paris13.fr/~gauthier/marionnet_ssh"
 
@@ -108,7 +109,11 @@ function parseRequest() {
         for j in {1..5}; do
             dataRequest[$i,$j]=$(cat $requestName | grep '^[^#]' | sed -n "${i}p" | cut -d ';' -f $j)
         done
+        # dataRequest[$i]=$(cat $requestName | grep '^[^#]' | sed -n "${i}p")
     done
+    
+    local pName=$(echo $projectName | cut -d . -f 1)
+    cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/\1 - \2/')
 
     echo "$nbLine request found"
 }
@@ -116,10 +121,28 @@ function parseRequest() {
 function evaluation() {
     echo "Evaluation in progress ..."
     parseRequest
-
+    
     for i in $(seq 1 $nbLine); do
-        echo "${dataRequest[$i,1]} : $(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | grep -o ${dataRequest[$i,4]})"
+        # echo "${dataRequest[$i,1]} : $(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | grep -o ${dataRequest[$i,4]})"
+        data[$i]="${dataRequest[$i,1]} : $(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | sed -n '4p')"
+        echo ${data[$i]}
     done
+    
+    sendData
+}
+
+function sendData() {
+    send="{\"data\":["
+    
+    for i in $(seq 1 $(( nbLine-1 ))); do
+        send="$send\"${data[$i]}\","
+    done
+    
+    send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\"}"
+    
+    echo $send
+    # curl -d $send $serverUrl
+    curl -H "Content-Type: application/json" -X POST -d "$send" $serverUrl
 }
 
 function examMode() {
@@ -140,9 +163,9 @@ function loop() {
     done
 }
 
-installDep
+# installDep
 downloadScript
 verifDeamon
-input
+# input
 getMarionetFile
 loop
