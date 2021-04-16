@@ -3,13 +3,13 @@
 # distrib=$(lsb_release -i | cut -d : -f 2)
 distrib=""
 
-packages="zenity wget ssh"
-urlProjectFile="http://www-info.iutv.univ-paris13.fr/~gauthier/example_TP1.mar"
-urlRequestFile="http://www-info.iutv.univ-paris13.fr/~gauthier/exempleTP1_requetes.txt"
-urlSsh="http://www-info.iutv.univ-paris13.fr/~gauthier/id_rsa_marionnet"
-serverUrl="localhost"
+serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
 
-scripts="http://www-info.iutv.univ-paris13.fr/~gauthier/marionnet_getVar http://www-info.iutv.univ-paris13.fr/~gauthier/marionnet_list http://www-info.iutv.univ-paris13.fr/~gauthier/marionnet_ssh"
+packages="zenity wget ssh"
+projectName="example_TP1.mar"
+requestName="exempleTP1_requetes.txt"
+urlSsh="id_rsa_marionnet"
+scripts="marionnet_getVar marionnet_list marionnet_ssh"
 
 name=""
 firstName=""
@@ -36,17 +36,16 @@ function downloadScript() {
         mkdir script
         echo "script/ created"
     fi
-    local name=""
+
     for sc in $scripts; do
-        name=$(echo $sc | grep -o "[^/]*$" )
-        if [[ ! -f script/$name ]]; then
-            echo "Downloading $name in script/ ..."
+        if [[ ! -f script/$sc ]]; then
+            echo "Downloading $sc ..."
             cd script
-            wget -nv $sc
-            chmod +x $name
+            wget -nv $serverUrl/$sc
+            chmod +x $sc
             cd ..
         else
-            echo "$name already exist"
+            echo "$sc already exist"
         fi
     done
 }
@@ -74,17 +73,14 @@ function verifDeamon() {
 }
 
 function getMarionetFile() {
-    projectName=$(echo $urlProjectFile | grep -o "[^/]*$" )
-    requestName=$(echo $urlRequestFile | grep -o "[^/]*$" )
-
     if [[ ! -f $projectName ]]; then
         echo "Downloading project file ..."
-        wget -nv $urlProjectFile
+        wget -nv $serverUrl/$projectName
     fi
 
     if [[ ! -f $requestName ]]; then
         echo "Downloading request file ..."
-        wget -nv $urlRequestFile
+        wget -nv $serverUrl/$requestName
     fi
     
     if [[ -f $projectName ]]; then
@@ -109,7 +105,6 @@ function parseRequest() {
         for j in {1..5}; do
             dataRequest[$i,$j]=$(cat $requestName | grep '^[^#]' | sed -n "${i}p" | cut -d ';' -f $j)
         done
-        # dataRequest[$i]=$(cat $requestName | grep '^[^#]' | sed -n "${i}p")
     done
     
     local pName=$(echo $projectName | cut -d . -f 1)
@@ -124,8 +119,8 @@ function evaluation() {
     
     for i in $(seq 1 $nbLine); do
         # echo "${dataRequest[$i,1]} : $(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | grep -o ${dataRequest[$i,4]})"
-        data[$i]="${dataRequest[$i,1]} : $(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | sed -n '4p')"
-        echo ${data[$i]}
+        data[$i]=$(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | sed -n '4p')
+        echo "Getting data $i/$nbLine ..."
     done
     
     sendData
@@ -138,11 +133,8 @@ function sendData() {
         send="$send\"${data[$i]}\","
     done
     
-    # send="$send\"${data[$nbLine]}\"]}"
     send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\"}"
     
-    echo $send
-    # curl -d $send $serverUrl
     curl -H "Content-Type: application/json" -X POST -d "$send" $serverUrl
 }
 
