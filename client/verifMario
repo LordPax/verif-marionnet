@@ -4,6 +4,8 @@
 distrib=""
 
 serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
+serverPOST=$serverUrl
+# serverPOST="http://192.168.1.24/server/"
 
 packages="zenity wget ssh"
 projectName="example_TP1.mar"
@@ -108,7 +110,8 @@ function parseRequest() {
     done
     
     local pName=$(echo $projectName | cut -d . -f 1)
-    cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/\1 - \2/' | tr -d '\n')
+    # cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/\1 - \2/' | tr -d '\n')
+    cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*">\([^<]*\).*$/\3 \1 \2; /' | tr -d '\n')
 
     echo "$nbLine request found"
 }
@@ -128,14 +131,12 @@ function evaluation() {
 
 function sendData() {
     send="{\"data\":["
-    
     for i in $(seq 1 $(( nbLine-1 ))); do
         send="$send\"${data[$i]}\","
     done
-    
     send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\"}"
     
-    curl -H "Content-Type: application/json" -X POST -d "$send" $serverUrl
+    curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
 }
 
 function examMode() {
