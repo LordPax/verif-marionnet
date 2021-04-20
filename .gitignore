@@ -1,0 +1,4 @@
+client/*.mar
+client/*.txt
+client/id_rsa_marionnet
+client/script

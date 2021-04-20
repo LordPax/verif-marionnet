@@ -7,7 +7,7 @@ serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
 serverPOST=$serverUrl
 # serverPOST="http://192.168.1.24/server/"
 
-packages="zenity wget ssh"
+packages="zenity wget ssh sshpass"
 projectName="example_TP1.mar"
 requestName="exempleTP1_requetes.txt"
 urlSsh="id_rsa_marionnet"
@@ -109,16 +109,41 @@ function parseRequest() {
         done
     done
     
-    local pName=$(echo $projectName | cut -d . -f 1)
+    # local pName=$(echo $projectName | cut -d . -f 1)
     # cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/\1 - \2/' | tr -d '\n')
-    cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*">\([^<]*\).*$/\3 \1 \2; /' | tr -d '\n')
+    # cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*">\([^<]*\).*$/\3 \1 \2; /' | tr -d '\n')
 
     echo "$nbLine request found"
+}
+
+function parseCable() {
+    local pName=$(echo $projectName | cut -d . -f 1)
+    
+    local seenD=0
+    local seenC=0
+    local patternD='DIRECT CABLE EDGES'
+    local patternC='CROSSOVER/SERIAL CABLE EDGES'
+
+    cable=$(cat /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | while read ligne ; do
+        if [[ $(echo $ligne) == "$patternD" ]]; then
+            seenD=1;seenC=0
+        elif [[ $(echo $ligne) == "$patternC" ]]; then
+            seenD=0;seenC=1
+        fi
+        
+        ligne=$(echo $ligne | grep '^[^:]*:img:c -> [^:]*:img:c')
+        if [[ $seenD -eq 1 ]]; then
+            echo $ligne | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/d \1 \2;/' | tr -d '\n'
+        elif [[ $seenC -eq 1 ]]; then
+            echo $ligne | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/c \1 \2;/' | tr -d '\n'
+        fi
+    done)
 }
 
 function evaluation() {
     echo "Evaluation in progress ..."
     parseRequest
+    parseCable
     
     for i in $(seq 1 $nbLine); do
         # echo "${dataRequest[$i,1]} : $(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | grep -o ${dataRequest[$i,4]})"
@@ -157,7 +182,7 @@ function loop() {
     done
 }
 
-# installDep
+installDep
 downloadScript
 verifDeamon
 # input
