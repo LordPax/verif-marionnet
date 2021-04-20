@@ -86,7 +86,7 @@ function getMarionetFile() {
     if [[ -f $projectName ]]; then
         res=$(ps aux | grep marionnet | grep $projectName | wc -l)
         if [[ $res -eq 0 ]]; then 
-            marionnet $projectName &
+            marionnet $projectName 2> /dev/null &
             echo "Marionnet started"
         else
             echo "Marionnet already running"
@@ -99,7 +99,7 @@ function getMarionetFile() {
     if [[ -f $idSsh ]]; then
         res=$(ls -l $idSsh | cut -d ' ' -f 1)
         if [[ $res != "-rw-------" ]]; then
-            echo "change chmod to 600"
+            echo "Change chmod to 600"
             chmod 600 $idSsh
         fi
     fi
@@ -124,23 +124,35 @@ function parseCable() {
     local seenC=0
     local patternD='DIRECT CABLE EDGES'
     local patternC='CROSSOVER/SERIAL CABLE EDGES'
+    local char=""
     
     echo "Parsing cable ..."
 
-    cable=$(cat /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | while read ligne ; do
-        if [[ $(echo $ligne) == "$patternD" ]]; then
+    cable=$(cat /tmp/marionnet-*.dir/example_TP1/tmp/sketch.dot | while read line ; do
+        if [[ $(echo $line) == "$patternD" ]]; then
             seenD=1;seenC=0
-        elif [[ $(echo $ligne) == "$patternC" ]]; then
+        elif [[ $(echo $line) == "$patternC" ]]; then
             seenD=0;seenC=1
         fi
-        
-        ligne=$(echo $ligne | grep '^[^:]*:img:c -> [^:]*:img:c')
+
         if [[ $seenD -eq 1 ]]; then
-            echo $ligne | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/d \1 \2;/' | tr -d '\n'
+            char='direct'
         elif [[ $seenC -eq 1 ]]; then
-            echo $ligne | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/c \1 \2;/' | tr -d '\n'
+            char='cross'
         fi
-    done)
+
+        line=$(echo $line | grep '^[^:]*:img:c -> [^:]*:img:c')
+        echo $line | sed -e "s/^\([^:]*\):img:c -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \1 \2;/" | tr -d '\n'
+    done
+    )
+}
+
+function formatJson() {
+    send="{\"data\":["
+    for i in $(seq 1 $(( nbLine-1 ))); do
+        send="$send\"${data[$i]}\","
+    done
+    send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\"}"
 }
 
 function evaluation() {
@@ -149,20 +161,11 @@ function evaluation() {
     parseCable
     
     for i in $(seq 1 $nbLine); do
-        data[$i]=$(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | sed -n '4p')
         echo "Getting data $i/$nbLine ..."
+        data[$i]=$(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | sed -n '4p')
     done
     
-    sendData
-}
-
-function sendData() {
-    send="{\"data\":["
-    for i in $(seq 1 $(( nbLine-1 ))); do
-        send="$send\"${data[$i]}\","
-    done
-    send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\"}"
-    
+    formatJson
     curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
 }
 
@@ -177,7 +180,13 @@ function loop() {
             read -p "Would you like to be evaluated (y/n) : " choice
         done
         if [[ $choice = "y" ]]; then
-            evaluation
+            res=$(ps aux | grep marionnet | grep $projectName | wc -l)
+            if [[ $res -eq 1 ]]; then 
+                evaluation
+            else 
+                echo "Marionnet not launch"
+                exit 1
+            fi
         else
             echo "Good bye"
         fi
