@@ -10,8 +10,9 @@ serverPOST=$serverUrl
 packages="zenity wget ssh sshpass"
 projectName="example_TP1.mar"
 requestName="exempleTP1_requetes.txt"
-urlSsh="id_rsa_marionnet"
+idSsh="id_rsa_marionnet"
 scripts="marionnet_getVar marionnet_list marionnet_ssh"
+file="$projectName $requestName $idSsh"
 
 name=""
 firstName=""
@@ -75,15 +76,12 @@ function verifDeamon() {
 }
 
 function getMarionetFile() {
-    if [[ ! -f $projectName ]]; then
-        echo "Downloading project file ..."
-        wget -nv $serverUrl/$projectName
-    fi
-
-    if [[ ! -f $requestName ]]; then
-        echo "Downloading request file ..."
-        wget -nv $serverUrl/$requestName
-    fi
+    for f in $file; do
+        if [[ ! -f $f ]]; then
+            echo "Downloading $f file ..."
+            wget -nv $serverUrl/$f
+        fi
+    done
     
     if [[ -f $projectName ]]; then
         res=$(ps aux | grep marionnet | grep $projectName | wc -l)
@@ -97,6 +95,14 @@ function getMarionetFile() {
         echo "Marionnet project does not exist"
         exit 1
     fi
+    
+    if [[ -f $idSsh ]]; then
+        res=$(ls -l $idSsh | cut -d ' ' -f 1)
+        if [[ $res != "-rw-------" ]]; then
+            echo "change chmod to 600"
+            chmod 600 $idSsh
+        fi
+    fi
 }
 
 function parseRequest() {
@@ -108,21 +114,18 @@ function parseRequest() {
             dataRequest[$i,$j]=$(cat $requestName | grep '^[^#]' | sed -n "${i}p" | cut -d ';' -f $j)
         done
     done
-    
-    # local pName=$(echo $projectName | cut -d . -f 1)
-    # cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*$/\1 - \2/' | tr -d '\n')
-    # cable=$(grep '^[^:]*:img:c -> [^:]*:img:c' /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | sed -e 's/^\([^:]*\):img:c -> \([^:]*\):img:c .*">\([^<]*\).*$/\3 \1 \2; /' | tr -d '\n')
 
     echo "$nbLine request found"
 }
 
 function parseCable() {
     local pName=$(echo $projectName | cut -d . -f 1)
-    
     local seenD=0
     local seenC=0
     local patternD='DIRECT CABLE EDGES'
     local patternC='CROSSOVER/SERIAL CABLE EDGES'
+    
+    echo "Parsing cable ..."
 
     cable=$(cat /tmp/marionnet-*.dir/$pName/tmp/sketch.dot | while read ligne ; do
         if [[ $(echo $ligne) == "$patternD" ]]; then
@@ -146,7 +149,6 @@ function evaluation() {
     parseCable
     
     for i in $(seq 1 $nbLine); do
-        # echo "${dataRequest[$i,1]} : $(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | grep -o ${dataRequest[$i,4]})"
         data[$i]=$(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | sed -n '4p')
         echo "Getting data $i/$nbLine ..."
     done
