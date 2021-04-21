@@ -155,6 +155,55 @@ function formatJson() {
     send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\"}"
 }
 
+# test_presence <machine>
+function test_presence() {
+    if [[ "A$1" != "" ]]; then
+        script/marionnet_list | grep -o "$1" > /dev/null && echo ok
+    fi
+}
+
+# adresseIP <machine>
+function adresseIP() {
+    if [[ "A$1" != "" ]]; then
+        script/marionnet_ssh $1 /sbin/ifconfig eth0  |grep 'inet ' | sed -e 's/^[ ]*inet \([^ ]*\) .*$/\1/' | cut -d : -f 2
+    fi
+}
+
+# mask <machine>
+function getMask() {
+    if [[ "A$1" != "" ]]; then
+        script/marionnet_ssh $1 /sbin/ifconfig eth0 |grep 'Mask:' | sed -e 's/^[ ]*Mask:\([^ ]*\)$/\1/' | cut -d : -f 4
+    fi
+}
+
+# pingMachine <machine1> <machine2>
+function pingMachine() {
+    if [[ "A$1" != "" ]] && [[ "A$2" != "" ]]; then
+        local ip=$(adresseIP $2)
+        script/marionnet_ssh $1 ping -c 1 -w 1 $ip &> /dev/null && echo ok
+    fi
+}
+
+# checkIP <machine>
+function checkIP() {
+    if [[ "A$1" != "" ]]; then
+        local mask=$(getMask $1)
+        local ip=$(adresseIP $1)
+
+        local octMask=$(echo $mask | cut -d . -f 1)
+        local octIP=$(echo $ip | cut -d . -f 1)
+        local res=$(($octMask & $octIP))
+
+        for i in {2..4}; do
+            octMask=$(echo $mask | cut -d . -f $i)
+            octIP=$(echo $ip | cut -d . -f $i)
+            res="$res.$(($octMask & $octIP))"
+        done
+
+        echo $res
+    fi
+}
+
 function evaluation() {
     echo "Evaluation in progress ..."
     parseRequest
@@ -162,7 +211,13 @@ function evaluation() {
     
     for i in $(seq 1 $nbLine); do
         echo "Getting data $i/$nbLine ..."
-        data[$i]=$(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]} | sed -n '4p')
+        if [[ "A${dataRequest[$i,2]}" != "A" ]]; then
+            data[$i]=$(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]})
+        else
+            data[$i]=$(${dataRequest[$i,3]}) # si pas de machine précisé -> exécute la commande en local
+            # echo ${dataRequest[$i,3]}
+            # echo ${data[$i]}
+        fi
     done
     
     formatJson
