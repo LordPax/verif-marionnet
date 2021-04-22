@@ -10,8 +10,10 @@
     // $requestFile='/home/lordpax/Documents/Programmation/Bash/verif-marionnet/server/exempleTP1_requetes.txt';
 
     $data = json_decode($input);
-    $show = "";
-    $log = $input;
+    $show = '';
+    $log = '';
+    $ip=$_SERVER['REMOTE_ADDR'];
+    $date=date('d/m/Y H:i:s');
 
     $file = fopen($requestFile, 'r');
 
@@ -33,11 +35,13 @@
         $totPts += $bareme;
         $note += $pts;
 
-        $show .= $content[$k][0].' : '.$pts.'/'.$bareme."\n";
+        $show .= trim($content[$k][0]).' : '.$pts.'/'.$bareme."\n";
     }
 
     $note20 = round(20 * $note / $totPts, 2);
     $show .= "Your grade is $note/$totPts => $note20/20 \n";
+
+    $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20\n";
 
     file_put_contents($logFile, $log, FILE_APPEND);
 
