@@ -4,10 +4,16 @@
     $input = file_get_contents('php://input');
     if (strlen($input) == 0) die(1);
 
-    $data = json_decode($input);
-    $save = "";
+    $logFile='/home/gauthier/verif-marionnet/server/log/request.log';
+    // $logFile='/home/lordpax/Documents/Programmation/Bash/verif-marionnet/server/log/request.log';
+    $requestFile='/home/gauthier/public_html/exempleTP1_requetes.txt';
+    // $requestFile='/home/lordpax/Documents/Programmation/Bash/verif-marionnet/server/exempleTP1_requetes.txt';
 
-    $file = fopen('exempleTP1_requetes.txt', 'r');
+    $data = json_decode($input);
+    $show = "";
+    $log = $input;
+
+    $file = fopen($requestFile, 'r');
 
     $content = [];
     while (!feof($file)) {
@@ -27,13 +33,13 @@
         $totPts += $bareme;
         $note += $pts;
 
-        $save .= $content[$k][0].' : '.$pts.'/'.$bareme."\n";
+        $show .= $content[$k][0].' : '.$pts.'/'.$bareme."\n";
     }
 
     $note20 = round(20 * $note / $totPts, 2);
-    $save .= "Your grade is $note/$totPts => $note20/20 \n";
+    $show .= "Your grade is $note/$totPts => $note20/20 \n";
 
-    // file_put_contents('log/marionnet.log', $save, FILE_APPEND);
+    file_put_contents($logFile, $log, FILE_APPEND);
 
-    echo $save;
+    echo $show;
 ?>
