@@ -4,7 +4,7 @@
 distrib=""
 
 serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
-serverPOST=$serverUrl
+serverPOST="$serverUrl/eval.php"
 # serverPOST="http://192.168.1.24/server/"
 
 packages="zenity wget ssh sshpass"
@@ -157,38 +157,62 @@ function formatJson() {
 
 # test_presence <machine>
 function test_presence() {
-    if [[ "A$1" != "" ]]; then
+    if [[ "A$1" != "A" ]]; then
         script/marionnet_list | grep -o "$1" > /dev/null && echo ok
     fi
 }
 
-# adresseIP <machine>
+# adresseIP <machine> [interface]
 function adresseIP() {
-    if [[ "A$1" != "" ]]; then
-        script/marionnet_ssh $1 /sbin/ifconfig eth0  |grep 'inet ' | sed -e 's/^[ ]*inet \([^ ]*\) .*$/\1/' | cut -d : -f 2
+    if [[ "A$1" != "A" ]]; then
+        local eth=$([[ "A$2" != "A" ]] && echo $2 || echo eth0)
+        script/marionnet_ssh $1 /sbin/ifconfig $eth | grep 'inet ' | awk '{print $2}' | cut -d : -f 2
     fi
 }
 
-# mask <machine>
+# getMask <machine> [interface]
 function getMask() {
-    if [[ "A$1" != "" ]]; then
-        script/marionnet_ssh $1 /sbin/ifconfig eth0 |grep 'Mask:' | sed -e 's/^[ ]*Mask:\([^ ]*\)$/\1/' | cut -d : -f 4
+    if [[ "A$1" != "A" ]]; then
+        local eth=$([[ "A$2" != "A" ]] && echo $2 || echo eth0)
+        script/marionnet_ssh $1 /sbin/ifconfig eth0 | grep 'Mask:' | awk '{print $4}' | cut -d : -f 2
     fi
 }
 
-# pingMachine <machine1> <machine2>
+# getRoute <machine> <route>
+function getRoute() {
+    if [[ "A$1" != "A" ]] && [[ "A$2" != "A" ]]; then
+        local route=$([[ "$2" = "default" ]] && echo '0.0.0.0' || echo $2)
+        local count=$(script/marionnet_ssh $1 route -n | grep "^$route" | wc -l)
+        [[ $count -eq 1 ]] && script/marionnet_ssh $1 route -n | grep "^$route"
+    fi
+}
+
+# getNet <machine> [interface]
+function getNet() {
+    if [[ "A$1" != "A" ]]; then
+        local eth=$([[ "A$2" != "A" ]] && echo $2 || echo eth0)
+        script/marionnet_ssh $1 route -n | grep "U[^G] .* $eth$" | awk '{print $1}'
+    fi
+}
+
+# pingMachine <machine1> <machine2> [interface]
 function pingMachine() {
-    if [[ "A$1" != "" ]] && [[ "A$2" != "" ]]; then
-        local ip=$(adresseIP $2)
+    if [[ "A$1" != "A" ]] && [[ "A$2" != "A" ]]; then
+        local eth=$([[ "A$3" != "A" ]] && echo $3 || echo eth0)
+        local ip=$(adresseIP $2 $eth)
         script/marionnet_ssh $1 ping -c 1 -w 1 $ip &> /dev/null && echo ok
     fi
 }
 
-# checkIP <machine>
+# checkIP <machine> [interface]
 function checkIP() {
-    if [[ "A$1" != "" ]]; then
-        local mask=$(getMask $1)
-        local ip=$(adresseIP $1)
+    if [[ "A$1" != "A" ]]; then
+        local eth=$([[ "A$2" != "A" ]] && echo $2 || echo eth0)
+        local mask=$(getMask $1 $eth)
+        local ip=$(adresseIP $1 $eth)
+        local net=$(getNet $1 $eth)
+
+        # echo $1 $2 $eth $mask $ip $net
 
         local octMask=$(echo $mask | cut -d . -f 1)
         local octIP=$(echo $ip | cut -d . -f 1)
@@ -200,7 +224,7 @@ function checkIP() {
             res="$res.$(($octMask & $octIP))"
         done
 
-        echo $res
+        [[ "$res" = "$net" ]] && echo ok
     fi
 }
 
