@@ -7,7 +7,7 @@ serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
 serverPOST="$serverUrl/eval.php"
 # serverPOST="http://192.168.1.24/server/"
 
-packages="zenity wget ssh sshpass"
+packages="zenity wget ssh"
 projectName="example_TP1.mar"
 requestName="exempleTP1_requetes.txt"
 idSsh="id_rsa_marionnet"
@@ -155,15 +155,15 @@ function formatJson() {
     send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\"}"
 }
 
-# test_presence <machine>
-function test_presence() {
+# testPresence <machine>
+function testPresence() {
     if [[ "A$1" != "A" ]]; then
         script/marionnet_list | grep -o "$1" > /dev/null && echo ok
     fi
 }
 
-# adresseIP <machine> [interface]
-function adresseIP() {
+# IPAddress <machine> [interface]
+function IPAddress() {
     if [[ "A$1" != "A" ]]; then
         local eth=$([[ "A$2" != "A" ]] && echo $2 || echo eth0)
         script/marionnet_ssh $1 /sbin/ifconfig $eth | grep 'inet ' | awk '{print $2}' | cut -d : -f 2
@@ -199,7 +199,7 @@ function getNet() {
 function pingMachine() {
     if [[ "A$1" != "A" ]] && [[ "A$2" != "A" ]]; then
         local eth=$([[ "A$3" != "A" ]] && echo $3 || echo eth0)
-        local ip=$(adresseIP $2 $eth)
+        local ip=$(IPAddress $2 $eth)
         script/marionnet_ssh $1 ping -c 1 -w 1 $ip &> /dev/null && echo ok
     fi
 }
@@ -209,7 +209,7 @@ function checkIP() {
     if [[ "A$1" != "A" ]]; then
         local eth=$([[ "A$2" != "A" ]] && echo $2 || echo eth0)
         local mask=$(getMask $1 $eth)
-        local ip=$(adresseIP $1 $eth)
+        local ip=$(IPAddress $1 $eth)
         local net=$(getNet $1 $eth)
 
         # echo $1 $2 $eth $mask $ip $net
