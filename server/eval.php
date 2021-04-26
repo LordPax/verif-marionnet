@@ -4,12 +4,16 @@
     $input = file_get_contents('php://input');
     if (strlen($input) == 0) die(1);
 
-    $logFile='/home/gauthier/verif-marionnet/server/log/request.log';
-    // $logFile='/home/lordpax/Documents/Programmation/Bash/verif-marionnet/server/log/request.log';
-    $requestFile='/home/gauthier/public_html/exempleTP1_requetes.txt';
+    $data = json_decode($input);
+    $source = $data->source; 
+    $mode = $data->examMode;
+
+    $normalLogFile='/home/gauthier/verif-marionnet/server/log/normal.log';
+    $examLogFile='/home/gauthier/verif-marionnet/server/log/exam.log';
+    $logFile = $mode == 1 ? $examLogFile : $normalLogFile;
+    $requestFile='/home/gauthier/public_html/'.$source.'/exempleTP1_requetes.txt';
     // $requestFile='/home/lordpax/Documents/Programmation/Bash/verif-marionnet/server/exempleTP1_requetes.txt';
 
-    $data = json_decode($input);
     $show = '';
     $log = '';
     $ip=$_SERVER['REMOTE_ADDR'];
@@ -41,7 +45,10 @@
     $note20 = round(20 * $note / $totPts, 2);
     $show .= "Your grade is $note/$totPts => $note20/20 \n";
 
-    $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20\n";
+    if ($mode == 1)
+        $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20; firstName:$data->firstName; name:$data->name; idExam:$data->idExam\n";
+    else
+        $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20\n";
 
     file_put_contents($logFile, $log, FILE_APPEND);
 
