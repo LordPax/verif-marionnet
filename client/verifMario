@@ -4,15 +4,17 @@
 distrib=""
 
 serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
-serverPOST="$serverUrl/eval.php"
+serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
+source="marioTestFile" # le dossier ou chercher les fichiers
 # serverPOST="http://192.168.1.24/server/"
 
 packages="zenity wget ssh"
 projectName="example_TP1.mar"
 requestName="exempleTP1_requetes.txt"
 idSsh="id_rsa_marionnet"
-scripts="marionnet_getVar marionnet_list marionnet_ssh"
+# scripts="marionnet_getVar marionnet_list marionnet_ssh"
 file="$projectName $requestName $idSsh"
+timing=10 # temps en seconde
 
 name=""
 firstName=""
@@ -21,12 +23,183 @@ choice=""
 
 declare -A dataRequest
 
+debug=$([ $# -eq 1 ] && [ "$1" == "--debug" ] && echo 1 || echo 0)
+exam=$([ $0 == './examMario' ] && echo 1 || echo 0)
+# exam=$(echo $0 | grep 'examMario' &> /dev/null && echo 1 || echo 0)
+
+# marioSsh <machine> <cmd>
+function marioSsh() {
+    local cde=$0
+    local PRIVATE_RSA_KEY=id_rsa_marionnet
+
+    # we need more checks
+    #-- Checks
+    if [ "A$2" = "A" ]; then
+        echo "Usage: $cde  host cmd"
+        echo "where host is the name of a virtual machine in marionnet"
+        exit 1
+    fi
+
+    if [ "A$TMPDIR" = "A" ]; then
+        TMPDIR=/tmp
+    fi
+
+    local resu=`ls -d $TMPDIR/marionnet-*.dir 2> /dev/null`
+    if [ "A$resu" = "A" ]; then
+        echo "ERROR: No marionnet dir found in $TMPDIR, is it running ?"
+        exit 1
+    fi
+    if [ `echo $resu | wc -l` -gt 1 ]; then
+        echo "ERROR: more than one instance of marionnet detected, may be
+        something wrong happened to some of them ?"
+        echo "Please correct this first !"
+        exit 1
+    fi
+
+    local Host="$1"
+    shift
+    Cmd="$*"
+
+    resu=`ps aw |grep marionnet|grep "hostname=$Host "|head -1|sed -e 's/^.* eth42=\([^ ]*\) .*$/\1/'`'/'
+    if [ "$resu" = "/" ] ; then
+        echo "ERROR : machine $Host not found in current marionnet project"
+        exit 1
+    fi
+
+    local tap=`echo $resu | cut -d ',' -f 2`
+
+    if [ "A$tap" = "A" ]; then
+        echo "ERROR: no tap found"
+        exit 1
+    fi
+
+    local ip=`/sbin/route -n |grep $tap |cut -d ' ' -f 1`
+
+    local pubKey=$(ssh-keyscan -t ecdsa $ip 2> /dev/null)
+    local ref=$(cat ~/.ssh/known_hosts | grep $ip | cut -d ' ' -f 3)
+    local search=$(echo $pubKey | cut -d ' ' -f 3)
+
+    if [ "$search" != "$ref" ]; then
+        echo $pubKey >> ~/.ssh/known_hosts
+    fi
+
+    ssh -xq -i $PRIVATE_RSA_KEY root@$ip $Cmd
+}
+
+# marioList <void>
+function marioList() {
+    local cde=$0
+
+    #-- Checks
+
+    if [ "A$TMPDIR" = "A" ]; then
+        TMPDIR=/tmp
+    fi
+
+    local resu=`ls -d $TMPDIR/marionnet-*.dir 2> /dev/null`
+    if [ "A$resu" = "A" ]; then
+        echo "ERROR: No marionnet dir found in $TMPDIR, is it running ?"
+        exit 1
+    fi
+    if [ `echo $resu | wc -l` -gt 1 ]; then
+        echo "ERROR: more than one instance of marionnet detected, may be
+        something wrong happened to some of them ?"
+        echo "Please correct this first !"
+        exit 1
+    fi
+
+    local projectDIR=$(ls -d $TMPDIR/marionnet-*.dir)
+    cd $projectDIR
+    local projectName=$(ls |egrep -v '^(hub|hublet|switch|sparse-swap)-')
+
+    cat $projectDIR/$projectName/tmp/sketch.dot | grep '\w[^(edge)\[] \[' | awk '{print $1 " "}' | tr -d '\n'
+}
+
+# cdr2mask <cidr>
+function cdr2mask() {
+   set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
+   [ $1 -gt 1 ] && shift $1 || shift
+   echo ${1-0}.${2-0}.${3-0}.${4-0}
+}
+
+# testPresence <machine>
+function testPresence() {
+    if [ "A$1" != "A" ]; then
+        marioList | grep -o "$1" > /dev/null && echo ok
+    fi
+}
+
+# IPAddress <machine> [interface]
+function IPAddress() {
+    if [ "A$1" != "A" ]; then
+        local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
+        marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d / -f 1
+    fi
+}
+
+# getMask <machine> [interface]
+function getMask() {
+    if [ "A$1" != "A" ]; then
+        local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
+        cidr=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d / -f 2)
+        cdr2mask $cidr
+    fi
+}
+
+# getRoute <machine> <route>
+function getRoute() {
+    if [ "A$1" != "A" ] && [ "A$2" != "A" ]; then
+        local route=$([ "$2" = "default" ] && echo '0.0.0.0' || echo $2)
+        local count=$(marioSsh $1 route -n | grep "^$route" | wc -l)
+        [ $count -eq 1 ] && marioSsh $1 route -n | grep "^$route"
+    fi
+}
+
+# getNet <machine> [interface]
+function getNet() {
+    if [ "A$1" != "A" ]; then
+        local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
+        marioSsh $1 route -n | grep "U[^G] .* $eth$" | awk '{print $1}'
+    fi
+}
+
+# pingMachine <machine1> <machine2> [interface]
+function pingMachine() {
+    if [ "A$1" != "A" ] && [ "A$2" != "A" ]; then
+        local eth=$([ "A$3" != "A" ] && echo $3 || echo eth0)
+        local ip=$(IPAddress $2 $eth)
+        marioSsh $1 ping -c 1 -w 1 $ip &> /dev/null && echo ok
+    fi
+}
+
+# checkIP <machine> [interface]
+function checkIP() {
+    if [ "A$1" != "A" ]; then
+        local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
+        local mask=$(getMask $1 $eth)
+        local ip=$(IPAddress $1 $eth)
+        local net=$(getNet $1 $eth)
+
+        local octMask=$(echo $mask | cut -d . -f 1)
+        local octIP=$(echo $ip | cut -d . -f 1)
+        local res=$(($octMask & $octIP))
+
+        for i in {2..4}; do
+            octMask=$(echo $mask | cut -d . -f $i)
+            octIP=$(echo $ip | cut -d . -f $i)
+            res="$res.$(($octMask & $octIP))"
+        done
+
+        [ "$res" = "$net" ] && echo ok
+    fi
+}
+
 function installDep() {
-    echo "Searching for dependance ..."
+    [ $debug -eq 1 ] && echo "Searching for dependance ..."
     for p in $packages; do
         res=$(command -v $p | wc -l)
-        if [[ $res -eq 1 ]]; then
-            echo "Package $p found"
+        if [ $res -eq 1 ]; then
+            [ $debug -eq 1 ] && echo "Package $p found"
         else
             echo "Installing $p ..."
             sudo apt install $p
@@ -34,41 +207,22 @@ function installDep() {
     done
 }
 
-function downloadScript() {
-    if [[ ! -d script ]]; then
-        mkdir script
-        echo "script/ created"
-    fi
-
-    for sc in $scripts; do
-        if [[ ! -f script/$sc ]]; then
-            echo "Downloading $sc ..."
-            cd script
-            wget -nv $serverUrl/$sc
-            chmod +x $sc
-            cd ..
-        else
-            echo "$sc already exist"
-        fi
-    done
-}
-
 function input() {
-    while [[ "A$firstName" = "A" ]]; do
+    while [ "A$firstName" = "A" ]; do
         read -p "Enter your first name : " firstName
     done
-    while [[ "A$name" = "A" ]]; do
+    while [ "A$name" = "A" ]; do
         read -p "Enter your name : " name
     done
-    while [[ "A$idExam" = "A" ]]; do
+    while [ "A$idExam" = "A" ]; do
         read -p "Enter your exam id : " idExam
     done
 }
 
 function verifDeamon() {
     res=$(ps aux | grep marionnet | grep daemon.native | wc -l)
-    if [[ $res -eq 1 ]]; then
-        echo "Marionnet daemon is already running"
+    if [ $res -eq 1 ]; then
+        [ $debug -eq 1 ] && echo "Marionnet daemon is already running"
     else
         sudo /etc/init.d/marionnet-daemon start
         echo "Marionnet daemon started"
@@ -77,29 +231,31 @@ function verifDeamon() {
 
 function getMarionetFile() {
     for f in $file; do
-        if [[ ! -f $f ]]; then
+        if [ ! -f $f ]; then
             echo "Downloading $f file ..."
-            wget -nv $serverUrl/$f
+            wget -nv $serverUrl/$source/$f
+        else
+            [ $debug -eq 1 ] && echo "$f already exist"
         fi
     done
     
-    if [[ -f $projectName ]]; then
+    if [ -f $projectName ]; then
         res=$(ps aux | grep marionnet | grep $projectName | wc -l)
-        if [[ $res -eq 0 ]]; then 
+        if [ $res -eq 0 ]; then 
             marionnet $projectName 2> /dev/null &
             echo "Marionnet started"
         else
-            echo "Marionnet already running"
+            [ $debug -eq 1 ] && echo "Marionnet already running"
         fi
     else
         echo "Marionnet project does not exist"
         exit 1
     fi
     
-    if [[ -f $idSsh ]]; then
+    if [ -f $idSsh ]; then
         res=$(ls -l $idSsh | cut -d ' ' -f 1)
-        if [[ $res != "-rw-------" ]]; then
-            echo "Change chmod to 600"
+        if [ $res != "-rw-------" ]; then
+            [ $debug -eq 1 ] && echo "Change chmod to 600"
             chmod 600 $idSsh
         fi
     fi
@@ -107,14 +263,18 @@ function getMarionetFile() {
 
 function parseRequest() {
     echo "Parsing request ..."
-    nbLine=$(cat $requestName | grep '^[^#]' | wc -l)
+    local i=0
 
-    for i in $(seq 1 $nbLine); do
-        for j in {1..5}; do
-            dataRequest[$i,$j]=$(cat $requestName | grep '^[^#]' | sed -n "${i}p" | cut -d ';' -f $j)
-        done
-    done
+    while read line; do
+        if echo $line | grep '^[^#]' &> /dev/null; then
+            i=$((i + 1))
+            for j in {1..5}; do
+                dataRequest[$i,$j]=$(echo $line | cut -d ';' -f $j)
+            done
+        fi
+    done < $requestName
 
+    nbLine=$i
     echo "$nbLine request found"
 }
 
@@ -129,15 +289,15 @@ function parseCable() {
     echo "Parsing cable ..."
 
     cable=$(cat /tmp/marionnet-*.dir/example_TP1/tmp/sketch.dot | while read line ; do
-        if [[ $(echo $line) == "$patternD" ]]; then
+        if [ "$(echo $line)" == "$patternD" ]; then
             seenD=1;seenC=0
-        elif [[ $(echo $line) == "$patternC" ]]; then
+        elif [ "$(echo $line)" == "$patternC" ]; then
             seenD=0;seenC=1
         fi
 
-        if [[ $seenD -eq 1 ]]; then
+        if [ $seenD -eq 1 ]; then
             char='direct'
-        elif [[ $seenC -eq 1 ]]; then
+        elif [ $seenC -eq 1 ]; then
             char='cross'
         fi
 
@@ -152,115 +312,48 @@ function formatJson() {
     for i in $(seq 1 $(( nbLine-1 ))); do
         send="$send\"${data[$i]}\","
     done
-    send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\"}"
-}
+    send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\", \"source\":\"$source\", \"examMode\":\"$exam\""
 
-# testPresence <machine>
-function testPresence() {
-    if [[ "A$1" != "A" ]]; then
-        script/marionnet_list | grep -o "$1" > /dev/null && echo ok
+    if [ $exam -eq 1 ]; then
+        send="$send, \"firstName\":\"$firstName\", \"name\":\"$name\", \"idExam\":\"$idExam\"}"
+    else
+        send="$send}"
     fi
 }
 
-# IPAddress <machine> [interface]
-function IPAddress() {
-    if [[ "A$1" != "A" ]]; then
-        local eth=$([[ "A$2" != "A" ]] && echo $2 || echo eth0)
-        script/marionnet_ssh $1 /sbin/ifconfig $eth | grep 'inet ' | awk '{print $2}' | cut -d : -f 2
-    fi
-}
-
-# getMask <machine> [interface]
-function getMask() {
-    if [[ "A$1" != "A" ]]; then
-        local eth=$([[ "A$2" != "A" ]] && echo $2 || echo eth0)
-        script/marionnet_ssh $1 /sbin/ifconfig eth0 | grep 'Mask:' | awk '{print $4}' | cut -d : -f 2
-    fi
-}
-
-# getRoute <machine> <route>
-function getRoute() {
-    if [[ "A$1" != "A" ]] && [[ "A$2" != "A" ]]; then
-        local route=$([[ "$2" = "default" ]] && echo '0.0.0.0' || echo $2)
-        local count=$(script/marionnet_ssh $1 route -n | grep "^$route" | wc -l)
-        [[ $count -eq 1 ]] && script/marionnet_ssh $1 route -n | grep "^$route"
-    fi
-}
-
-# getNet <machine> [interface]
-function getNet() {
-    if [[ "A$1" != "A" ]]; then
-        local eth=$([[ "A$2" != "A" ]] && echo $2 || echo eth0)
-        script/marionnet_ssh $1 route -n | grep "U[^G] .* $eth$" | awk '{print $1}'
-    fi
-}
-
-# pingMachine <machine1> <machine2> [interface]
-function pingMachine() {
-    if [[ "A$1" != "A" ]] && [[ "A$2" != "A" ]]; then
-        local eth=$([[ "A$3" != "A" ]] && echo $3 || echo eth0)
-        local ip=$(IPAddress $2 $eth)
-        script/marionnet_ssh $1 ping -c 1 -w 1 $ip &> /dev/null && echo ok
-    fi
-}
-
-# checkIP <machine> [interface]
-function checkIP() {
-    if [[ "A$1" != "A" ]]; then
-        local eth=$([[ "A$2" != "A" ]] && echo $2 || echo eth0)
-        local mask=$(getMask $1 $eth)
-        local ip=$(IPAddress $1 $eth)
-        local net=$(getNet $1 $eth)
-
-        # echo $1 $2 $eth $mask $ip $net
-
-        local octMask=$(echo $mask | cut -d . -f 1)
-        local octIP=$(echo $ip | cut -d . -f 1)
-        local res=$(($octMask & $octIP))
-
-        for i in {2..4}; do
-            octMask=$(echo $mask | cut -d . -f $i)
-            octIP=$(echo $ip | cut -d . -f $i)
-            res="$res.$(($octMask & $octIP))"
-        done
-
-        [[ "$res" = "$net" ]] && echo ok
-    fi
+function getData() {
+    for i in $(seq 1 $nbLine); do
+        echo "Getting data $i/$nbLine ..."
+        if [ "A${dataRequest[$i,2]}" != "A" ]; then
+            data[$i]=$(marioSsh ${dataRequest[$i,2]} ${dataRequest[$i,3]})
+        else
+            data[$i]=$(${dataRequest[$i,3]}) # si pas de machine précisé -> exécute la commande en local
+        fi
+        # echo ${dataRequest[$i,3]}
+        # echo ${data[$i]}
+    done
 }
 
 function evaluation() {
     echo "Evaluation in progress ..."
+
     parseRequest
     parseCable
-    
-    for i in $(seq 1 $nbLine); do
-        echo "Getting data $i/$nbLine ..."
-        if [[ "A${dataRequest[$i,2]}" != "A" ]]; then
-            data[$i]=$(script/marionnet_ssh ${dataRequest[$i,2]} ${dataRequest[$i,3]})
-        else
-            data[$i]=$(${dataRequest[$i,3]}) # si pas de machine précisé -> exécute la commande en local
-            # echo ${dataRequest[$i,3]}
-            # echo ${data[$i]}
-        fi
-    done
-    
+    getData
     formatJson
+
     curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
 }
 
-function examMode() {
-    echo "exam mode"
-}
-
-function loop() {
-    while [[ $choice != "n" ]]; do
+function normalMode() {
+    while [ "$choice" != "n" ]; do
         choice=""
-        while [[ "A$choice" = "A" ]] || [[ $choice != "y" ]] && [[ $choice != "n" ]]; do
+        while [ "A$choice" = "A" ] || [ "$choice" != "y" ] && [ "$choice" != "n" ]; do
             read -p "Would you like to be evaluated (y/n) : " choice
         done
-        if [[ $choice = "y" ]]; then
+        if [ "$choice" = "y" ]; then
             res=$(ps aux | grep marionnet | grep $projectName | wc -l)
-            if [[ $res -eq 1 ]]; then 
+            if [ $res -eq 1 ]; then 
                 evaluation
             else 
                 echo "Marionnet not launch"
@@ -272,9 +365,34 @@ function loop() {
     done
 }
 
+function timerGraph() {
+    local percent=0
+    for sec in $(seq 0 $timing); do
+        echo "# $((timing - sec)) second"
+        percent=$((100 * sec / timing))
+        echo $percent
+        sleep 1
+    done | zenity --progress --percentage=0
+}
+
+function timerText() {
+    for sec in $(seq 0 $timing); do
+        clear
+        echo "$((timing - sec)) second left ..."
+        sleep 1
+    done
+}
+
+function examMode() {
+    input
+
+    echo "Your are in exam mode, you have $timing seconds ..."
+    timerText
+
+    evaluation
+}
+
 installDep
-downloadScript
 verifDeamon
-# input
 getMarionetFile
-loop
+[ $exam -eq 1 ] && examMode || normalMode
