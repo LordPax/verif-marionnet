@@ -33,8 +33,8 @@
     $note = 0;
     
     foreach ($data->data as $k => $v) {
-        $bareme = isset($content[$k][4]) ? (int)trim($content[$k][4]) : 1;
-        $pts = preg_match('/'.trim($content[$k][3]).'/', $v) === 1 ? $bareme : 0;
+        $bareme = isset($content[$k][3]) ? (int)trim($content[$k][3]) : 1;
+        $pts = preg_match('/'.trim($content[$k][2]).'/', $v) === 1 ? $bareme : 0;
 
         $totPts += $bareme;
         $note += $pts;
