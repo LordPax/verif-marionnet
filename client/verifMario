@@ -8,7 +8,7 @@ serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
 source="marioTestFile" # le dossier ou chercher les fichiers
 # serverPOST="http://192.168.1.24/server/"
 
-packages="zenity wget ssh"
+packages="zenity curl ssh"
 projectName="example_TP1.mar"
 requestName="exempleTP1_requetes.txt"
 idSsh="id_rsa_marionnet"
@@ -22,6 +22,11 @@ idExam=""
 choice=""
 
 declare -A dataRequest
+declare data
+declare cable
+
+nbCable=0
+nbLine=0
 
 debug=$([ $# -eq 1 ] && [ "$1" == "--debug" ] && echo 1 || echo 0)
 exam=$([ $0 == './examMario' ] && echo 1 || echo 0)
@@ -115,8 +120,8 @@ function marioList() {
     cat $projectDIR/$projectName/tmp/sketch.dot | grep '\w[^(edge)\[] \[' | awk '{print $1 " "}' | tr -d '\n'
 }
 
-# cdr2mask <cidr>
-function cdr2mask() {
+# cidr2mask <cidr>
+function cidr2mask() {
    set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
    [ $1 -gt 1 ] && shift $1 || shift
    echo ${1-0}.${2-0}.${3-0}.${4-0}
@@ -129,8 +134,8 @@ function testPresence() {
     fi
 }
 
-# IPAddress <machine> [interface]
-function IPAddress() {
+# getIPAddress <machine> [interface]
+function getIPAddress() {
     if [ "A$1" != "A" ]; then
         local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
         marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d / -f 1
@@ -142,7 +147,7 @@ function getMask() {
     if [ "A$1" != "A" ]; then
         local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
         cidr=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d / -f 2)
-        cdr2mask $cidr
+        cidr2mask $cidr
     fi
 }
 
@@ -167,8 +172,25 @@ function getNet() {
 function pingMachine() {
     if [ "A$1" != "A" ] && [ "A$2" != "A" ]; then
         local eth=$([ "A$3" != "A" ] && echo $3 || echo eth0)
-        local ip=$(IPAddress $2 $eth)
+        local ip=$(getIPAddress $2 $eth)
         marioSsh $1 ping -c 1 -w 1 $ip &> /dev/null && echo ok
+    fi
+}
+
+# getCable <machine1> <machine2>
+function getCable() {
+    if [ "A$1" != "A" ] && [ "A$2" != "A" ]; then
+        local cbl=""
+        local res=""
+
+        for i in $(seq 1 $nbCable); do
+            res=$(echo ${cable[$i]} | grep "$1 $2")
+            if [ "A$res" != "A" ]; then
+                cbl=$res
+            fi
+        done
+
+        echo $cbl
     fi
 }
 
@@ -177,7 +199,7 @@ function checkIP() {
     if [ "A$1" != "A" ]; then
         local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
         local mask=$(getMask $1 $eth)
-        local ip=$(IPAddress $1 $eth)
+        local ip=$(getIPAddress $1 $eth)
         local net=$(getNet $1 $eth)
 
         local octMask=$(echo $mask | cut -d . -f 1)
@@ -232,8 +254,8 @@ function verifDeamon() {
 function getMarionetFile() {
     for f in $file; do
         if [ ! -f $f ]; then
-            echo "Downloading $f file ..."
-            wget -nv $serverUrl/$source/$f
+            echo "Downloading $f ..."
+            curl -s $serverUrl/$source/$f -o $f
         else
             [ $debug -eq 1 ] && echo "$f already exist"
         fi
@@ -268,7 +290,7 @@ function parseRequest() {
     while read line; do
         if echo $line | grep '^[^#]' &> /dev/null; then
             i=$((i + 1))
-            for j in {1..5}; do
+            for j in {1..4}; do
                 dataRequest[$i,$j]=$(echo $line | cut -d ';' -f $j)
             done
         fi
@@ -285,10 +307,11 @@ function parseCable() {
     local patternD='DIRECT CABLE EDGES'
     local patternC='CROSSOVER/SERIAL CABLE EDGES'
     local char=""
+    local i=0
     
     echo "Parsing cable ..."
 
-    cable=$(cat /tmp/marionnet-*.dir/example_TP1/tmp/sketch.dot | while read line ; do
+    while read line ; do
         if [ "$(echo $line)" == "$patternD" ]; then
             seenD=1;seenC=0
         elif [ "$(echo $line)" == "$patternC" ]; then
@@ -302,9 +325,15 @@ function parseCable() {
         fi
 
         line=$(echo $line | grep '^[^:]*:img:c -> [^:]*:img:c')
-        echo $line | sed -e "s/^\([^:]*\):img:c -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \1 \2;/" | tr -d '\n'
-    done
-    )
+        if [ "A$line" != "A" ]; then
+            i=$((i + 1))
+            cable[$i]=$(echo $line | sed -e "s/^\([^:]*\):img:c -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \1 \2/")
+            i=$((i + 1))
+            cable[$i]=$(echo $line | sed -e "s/^\([^:]*\):img:c -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \2 \1/")
+        fi
+    done < /tmp/marionnet-*.dir/$pName/tmp/sketch.dot
+
+    nbCable=$i
 }
 
 function formatJson() {
@@ -312,7 +341,7 @@ function formatJson() {
     for i in $(seq 1 $(( nbLine-1 ))); do
         send="$send\"${data[$i]}\","
     done
-    send="$send\"${data[$nbLine]}\"],\"cable\":\"$cable\", \"source\":\"$source\", \"examMode\":\"$exam\""
+    send="$send\"${data[$nbLine]}\"], \"source\":\"$source\", \"examMode\":\"$exam\""
 
     if [ $exam -eq 1 ]; then
         send="$send, \"firstName\":\"$firstName\", \"name\":\"$name\", \"idExam\":\"$idExam\"}"
@@ -323,13 +352,11 @@ function formatJson() {
 
 function getData() {
     for i in $(seq 1 $nbLine); do
-        echo "Getting data $i/$nbLine ..."
-        if [ "A${dataRequest[$i,2]}" != "A" ]; then
-            data[$i]=$(marioSsh ${dataRequest[$i,2]} ${dataRequest[$i,3]})
-        else
-            data[$i]=$(${dataRequest[$i,3]}) # si pas de machine précisé -> exécute la commande en local
-        fi
-        # echo ${dataRequest[$i,3]}
+        # clear
+        echo "Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
+        data[$i]=$(${dataRequest[$i,2]}) # execute la commande
+
+        # echo ${dataRequest[$i,2]}
         # echo ${data[$i]}
     done
 }

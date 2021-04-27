@@ -2,6 +2,135 @@
 ## Idée
 examen de TP/évalutation automatique TPS marionnet.
 
+## Format du fichier de requetes
+nom_test ; commande; regexp du résultat attendu; bareme
+
+## Commande/Fonction utilisable dans le fichier de requetes
+### marioSsh
+Exécute une commande via ssh et donne un retour
+* syntax
+```bash
+marioSsh <machine> <cmd>
+```
+* exemple
+```bash
+marioSsh m1 ls -la
+```
+### marioList
+Liste tout les équipements du projet
+* syntax
+```bash
+marioList <void>
+```
+* exemple
+```bash
+marioList
+```
+* format de l'affichage
+```
+R1 S1 H1 m2 m1
+```
+### cidr2mask
+Convertie un mask cidr en mask decimal pointé
+* syntax
+```bash
+cidr2mask <cidr>
+```
+* exemple
+```bash
+cidr2mask 24
+```
+### testPresence
+Test la presence de n'importe quel équipements (affiche "ok" si il exist)
+* syntax
+```bash
+testPresence <machine>
+```
+* exemple
+```bash
+testPresence S1
+```
+### getIPAddress
+Affiche l'ip de la machine (par défaut : interface=eth0)
+* syntax
+```bash
+getIPAddress <machine> [interface]
+```
+* exemple
+```bash
+getIPAddress m1
+getIPAddress m1 eth1
+```
+### getMask
+Affiche le mask (decimal pointé) de la machine (par défaut : interface=eth0)
+* syntax
+```bash
+getMask <machine> [interface]
+```
+* exemple
+```bash
+getMask m1
+```
+### getRoute
+Affiche la route de la machine
+* syntax
+```bash
+getRoute <machine> <route>
+```
+* exemple
+```bash
+getRoute m1 default
+getRoute R1 11.0.1.0
+```
+* format de l'affichage
+```
+0.0.0.0 10.0.0.254 0.0.0.0 UG 0 0 0 eth0 <- pour default
+```
+### getNet
+Affiche l'adresse réseaux de la machine (par défaut : interface=eth0)
+* syntax
+```bash
+getNet <machine> [interface]
+```
+* exemple
+```bash
+getNet m1
+```
+### pingMachine
+Ping d'une machine à une autre (affiche "ok" si il y parvient) (par défaut : interface=eth0)
+* syntax
+```bash
+pingMachine <machine1> <machine2> [interface]
+```
+* exemple
+```bash
+pingMachine m1 m2
+```
+### getCable
+Affiche le cable et le type (cross ou direct) de cable entre 2 équipements
+* syntax
+```bash
+getCable <machine1> <machine2>
+```
+* exemple
+```bash
+getCable R1 S1
+```
+* format de l'affichage
+```
+direct d1 R1 S1
+```
+### checkIP
+Vérifie l'ip d'une machine en fonction du mask (affiche "ok" si il y parvient) (par défaut : interface=eth0)
+* syntax
+```bash
+checkIP <machine> [interface]
+```
+* exemple
+```bash
+checkIP R1
+```
+
 ## Scenario
 * Un ps (script shell appelé verifMario) doit être lancé par l'utilisateur :
     * vérif des besoins et installations des éléments manquant : zenity par exemple
