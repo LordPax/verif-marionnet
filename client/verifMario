@@ -353,12 +353,13 @@ function formatJson() {
 function getData() {
     for i in $(seq 1 $nbLine); do
         # clear
-        echo "Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
+        echo -en "Getting data $i/$nbLine : ${dataRequest[$i,1]} ...\r"
         data[$i]=$(${dataRequest[$i,2]}) # execute la commande
 
         # echo ${dataRequest[$i,2]}
         # echo ${data[$i]}
     done
+    echo "======================Result======================"
 }
 
 function evaluation() {
