@@ -11,7 +11,7 @@
     $normalLogFile='/home/gauthier/verif-marionnet/server/log/normal.log';
     $examLogFile='/home/gauthier/verif-marionnet/server/log/exam.log';
     $logFile = $mode == 1 ? $examLogFile : $normalLogFile;
-    $requestFile='/home/gauthier/public_html/'.$source.'/exempleTP1_requetes.txt';
+    $requestFile='/home/gauthier/public_html/'.$source.'/exempleTP1_requetes.json';
     // $requestFile='/home/lordpax/Documents/Programmation/Bash/verif-marionnet/server/exempleTP1_requetes.txt';
 
     $show = '';
@@ -19,27 +19,35 @@
     $ip=$_SERVER['REMOTE_ADDR'];
     $date=date('d/m/Y H:i:s');
 
-    $file = fopen($requestFile, 'r');
-
-    $content = [];
-    while (!feof($file)) {
-        $line = fgets($file, 255);
-        if (preg_match('/^[^#]/', $line) == 1 && strlen($line) > 1)
-            array_push($content, explode(';', $line));
-    }
-    fclose($file);
+    $file = file_get_contents($requestFile);
+    $content = json_decode($file);
 
     $totPts = 0;
     $note = 0;
+    $valid = 0;
+    $pts = 0;
+    $comment = "";
     
     foreach ($data->data as $k => $v) {
-        $bareme = isset($content[$k][3]) ? (int)trim($content[$k][3]) : 1;
-        $pts = preg_match('/'.trim($content[$k][2]).'/', $v) === 1 ? $bareme : 0;
+        $bareme = !empty($content[$k]->bareme) ? $content[$k]->bareme : 1;
+
+        for ($i = 0; $valid === 0 && $i < count($content[$k]->responses); $i++) {
+            $valid = preg_match('/'.$content[$k]->responses[$i]->regex.'/', $v);
+            if ($valid === 1) {
+                $pts = $content[$k]->responses[$i]->pts;
+                $comment = $content[$k]->responses[$i]->comment;
+            }
+        }
 
         $totPts += $bareme;
         $note += $pts;
+ 
+        $show .= $content[$k]->label." :\t ".$pts.'/'.$bareme." \t".$comment."\n";
 
-        $show .= trim($content[$k][0]).' : '.$pts.'/'.$bareme."\n";
+        $pts = 0;
+        $comment = "";
+        $valid = 0;
+
     }
 
     $note20 = round(20 * $note / $totPts, 2);
