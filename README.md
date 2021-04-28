@@ -3,7 +3,43 @@
 examen de TP/évalutation automatique TPS marionnet.
 
 ## Format du fichier de requetes
-nom_test ; commande; regexp du résultat attendu; bareme
+```json
+[
+    {
+        "label" : "nom_du_test",
+        "command" : "commande à executer",
+        "responses" : [
+            {"regex" : "reponse attendu", "comment" : "message à afficher si la réponse est bonne","pts" : 2},
+            {"regex" : "reponse attendu", "comment" : "message à afficher si la réponse est bonne","pts" : 1},
+            {"regex" : ".*", "comment" : "message par défaut si aucune n'est validé","pts" : 0}
+        ],
+        "bareme" : 2
+    }
+]
+```
+* exemple
+```json
+[
+    {
+        "label" : "ip_R1_eth0",
+        "command" : "getIPAddress R1 eth0",
+        "responses" : [
+            {"regex" : "10\\.0\\.0\\.254", "comment" : "oui très bien","pts" : 1},
+            {"regex" : ".*", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
+        ],
+        "bareme" : 1
+    },
+    {
+        "label" : "mask_R1_eth0",
+        "command" : "getMask R1 eth0",
+        "responses" : [
+            {"regex" : "255\\.255\\.0\\.0", "comment" : "oui très bien", "pts" : 1},
+            {"regex" : ".*", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
+        ],
+        "bareme" : 1
+    }
+]
+```
 
 ## Commande/Fonction utilisable dans le fichier de requetes
 ### marioSsh
