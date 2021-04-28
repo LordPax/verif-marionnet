@@ -1,0 +1,20 @@
+[
+    {
+        "label" : "ip_R1_eth0",
+        "command" : "getIPAddress R1 eth0",
+        "responses" : [
+            {"regex" : "10\\.0\\.0\\.254", "comment" : "oui très bien","pts" : 1},
+            {"regex" : "", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
+        ],
+        "bareme" : 1
+    },
+    {
+        "label" : "mask_R1_eth0",
+        "command" : "getMask R1 eth0",
+        "responses" : [
+            {"regex" : "255\\.255\\.0\\.0", "comment" : "oui très bien", "pts" : 1},
+            {"regex" : "", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
+        ],
+        "bareme" : 1
+    }
+]

@@ -5,12 +5,12 @@ distrib=""
 
 serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
 serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
-source="marioTestFile" # le dossier ou chercher les fichiers
+source="marioTestJson" # le dossier ou chercher les fichiers
 # serverPOST="http://192.168.1.24/server/"
 
-packages="zenity curl ssh"
+packages="zenity curl ssh jq"
 projectName="example_TP1.mar"
-requestName="exempleTP1_requetes.txt"
+requestName="exempleTP1_requetes.json"
 idSsh="id_rsa_marionnet"
 # scripts="marionnet_getVar marionnet_list marionnet_ssh"
 file="$projectName $requestName $idSsh"
@@ -285,18 +285,15 @@ function getMarionetFile() {
 
 function parseRequest() {
     echo "Parsing request ..."
-    local i=0
+    nbLine=$(grep label $requestName | wc -l)
+    local l=0
+    
+    for i in $(seq 0 $((nbLine - 1))); do
+        l=$((i+1))
+        dataRequest[$l,1]=$(jq -r ".[$i].label" < $requestName)
+        dataRequest[$l,2]=$(jq -r ".[$i].command" < $requestName)
+    done
 
-    while read line; do
-        if echo $line | grep '^[^#]' &> /dev/null; then
-            i=$((i + 1))
-            for j in {1..4}; do
-                dataRequest[$i,$j]=$(echo $line | cut -d ';' -f $j)
-            done
-        fi
-    done < $requestName
-
-    nbLine=$i
     echo "$nbLine request found"
 }
 
@@ -353,9 +350,15 @@ function formatJson() {
 function getData() {
     for i in $(seq 1 $nbLine); do
         # clear
-        echo -en "Getting data $i/$nbLine : ${dataRequest[$i,1]} ...\r"
+        if [ $debug -eq 0 ]; then
+            echo -en "Getting data $i/$nbLine : ${dataRequest[$i,1]} ...\r"
+        else
+            echo "Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
+        fi
+
         data[$i]=$(${dataRequest[$i,2]}) # execute la commande
 
+        # echo ${dataRequest[$i,1]}
         # echo ${dataRequest[$i,2]}
         # echo ${data[$i]}
     done
@@ -370,7 +373,7 @@ function evaluation() {
     getData
     formatJson
 
-    curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
+    # curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
 }
 
 function normalMode() {
