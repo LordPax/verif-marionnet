@@ -4,8 +4,8 @@
 distrib=""
 
 serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
-# serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
-serverPOST="http://192.168.1.24/server/eval.php"
+serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
+# serverPOST="http://192.168.1.24/server/eval.php"
 source="marioTestJson" # le dossier ou chercher les fichiers
 
 packages="zenity curl ssh jq"
