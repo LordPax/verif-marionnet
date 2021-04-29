@@ -6,12 +6,12 @@ examen de TP/évalutation automatique TPS marionnet.
 ```json
 [
     {
-        "label" : "nom_du_test",
+        "label" : "nom du test",
         "command" : "commande à executer",
         "responses" : [
-            {"regex" : "reponse attendu", "comment" : "message à afficher si la réponse est bonne","pts" : 2},
-            {"regex" : "reponse attendu", "comment" : "message à afficher si la réponse est bonne","pts" : 1},
-            {"regex" : ".*", "comment" : "message par défaut si aucune n'est validé","pts" : 0}
+            {"regex" : "regex reponse attendu", "comment" : "message à afficher si la réponse est bonne","pts" : 2},
+            {"equal" : "reponse attendu", "comment" : "message à afficher si la réponse est bonne","pts" : 1},
+            {"default" : "", "comment" : "message par défaut si aucune n'est validé","pts" : 0}
         ],
         "bareme" : 2
     }
@@ -21,20 +21,30 @@ examen de TP/évalutation automatique TPS marionnet.
 ```json
 [
     {
-        "label" : "ip_R1_eth0",
-        "command" : "getIPAddress R1 eth0",
+        "label" : "ip m2 eth0",
+        "command" : "getIPAddress m2",
         "responses" : [
-            {"regex" : "10\\.0\\.0\\.254", "comment" : "oui très bien","pts" : 1},
-            {"regex" : ".*", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
+            {"regex" : "11\\.0\\.1\\..*", "comment" : "oui très bien","pts" : 1},
+            {"default" : "", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "mask_R1_eth0",
-        "command" : "getMask R1 eth0",
+        "label" : "mask m2 eth0",
+        "command" : "getMask m2",
         "responses" : [
-            {"regex" : "255\\.255\\.0\\.0", "comment" : "oui très bien", "pts" : 1},
-            {"regex" : ".*", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
+            {"equal" : "255.255.255.0", "comment" : "oui très bien", "pts" : 1},
+            {"default" : "", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
+        ],
+        "bareme" : 1
+    },
+    {
+        "label" : "cable S1aM1",
+        "command" : "getCable S1 m1",
+        "responses" : [
+            {"regex" : "direct .* S1 m1", "comment" : "oui très bien", "pts" : 1},
+            {"regex" : "cross .* S1 m1", "comment" : "il y a un cable mais il n'est pas du bon type", "pts" : 0.5},
+            {"default" : "", "comment" : "il manque un cable", "pts" : 0}
         ],
         "bareme" : 1
     }
@@ -51,20 +61,6 @@ marioSsh <machine> <cmd>
 * exemple
 ```bash
 marioSsh m1 ls -la
-```
-### marioList
-Liste tout les équipements du projet
-* syntax
-```bash
-marioList <void>
-```
-* exemple
-```bash
-marioList
-```
-* format de l'affichage
-```
-R1 S1 H1 m2 m1
 ```
 ### cidr2mask
 Convertie un mask cidr en mask decimal pointé

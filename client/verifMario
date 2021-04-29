@@ -4,9 +4,9 @@
 distrib=""
 
 serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
-serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
+# serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
+serverPOST="http://192.168.1.24/server/eval.php"
 source="marioTestJson" # le dossier ou chercher les fichiers
-# serverPOST="http://192.168.1.24/server/"
 
 packages="zenity curl ssh jq"
 projectName="example_TP1.mar"
@@ -14,7 +14,7 @@ requestName="exempleTP1_requetes.json"
 idSsh="id_rsa_marionnet"
 # scripts="marionnet_getVar marionnet_list marionnet_ssh"
 file="$projectName $requestName $idSsh"
-timing=10 # temps en seconde
+timing=20 # temps en seconde
 
 name=""
 firstName=""
@@ -28,9 +28,32 @@ declare cable
 nbCable=0
 nbLine=0
 
-debug=$([ $# -eq 1 ] && [ "$1" == "--debug" ] && echo 1 || echo 0)
+function helpFunc() {
+    echo "Usage : $0 [option]
+
+Option :
+    --help ................ show help
+    --debug ............... debug mode
+    --graph ............... graph mode"
+    exit 0
+}
+
+debug=0
+graph=0
 exam=$([ $0 == './examMario' ] && echo 1 || echo 0)
-# exam=$(echo $0 | grep 'examMario' &> /dev/null && echo 1 || echo 0)
+
+if [ $# -ge 1 ]; then
+    for i in $(seq 1 $#); do
+        if [ "$1" == "--debug" ]; then debug=1
+        elif [ "$1" == "--graph" ]; then graph=1
+        elif [ "$1" == "--help" ]; then helpFunc
+        else
+            echo "Enknown parameter" > /dev/stderr
+            exit 1
+        fi
+        shift
+    done
+fi
 
 # marioSsh <machine> <cmd>
 function marioSsh() {
@@ -200,7 +223,7 @@ function installDep() {
     done
 }
 
-function input() {
+function inputText() {
     while [ "A$firstName" = "A" ]; do
         read -p "Enter your first name : " firstName
     done
@@ -210,6 +233,22 @@ function input() {
     while [ "A$idExam" = "A" ]; do
         read -p "Enter your exam id : " idExam
     done
+}
+
+function inputGraph() {
+    local output=$(zenity --forms --title "input" \
+    --text "Enter your informations" \
+    --add-entry "Enter your first name" \
+    --add-entry "Enter your name" \
+    --add-entry "Enter your exam id")
+
+    if echo $output | grep -E ".+\|.+\|.+" &> /dev/null; then
+        firstName=$(echo $output | cut -d '|' -f 1)
+        name=$(echo $output | cut -d '|' -f 2)
+        idExam=$(echo $output | cut -d '|' -f 3)
+    else
+        inputGraph
+    fi
 }
 
 function verifDeamon() {
@@ -222,16 +261,7 @@ function verifDeamon() {
     fi
 }
 
-function getMarionetFile() {
-    for f in $file; do
-        if [ ! -f $f ]; then
-            echo "Downloading $f ..."
-            curl -s $serverUrl/$source/$f -o $f
-        else
-            [ $debug -eq 1 ] && echo "$f already exist"
-        fi
-    done
-    
+function lauchMarionnet() {
     if [ -f $projectName ]; then
         res=$(ps aux | grep marionnet | grep $projectName | wc -l)
         if [ $res -eq 0 ]; then 
@@ -244,7 +274,18 @@ function getMarionetFile() {
         echo "Marionnet project does not exist"
         exit 1
     fi
-    
+}
+
+function getMarionetFile() {
+    for f in $file; do
+        if [ ! -f $f ]; then
+            echo "Downloading $f ..."
+            curl -s $serverUrl/$source/$f -o $f
+        else
+            [ $debug -eq 1 ] && echo "$f already exist"
+        fi
+    done
+
     if [ -f $idSsh ]; then
         res=$(ls -l $idSsh | cut -d ' ' -f 1)
         if [ $res != "-rw-------" ]; then
@@ -315,11 +356,7 @@ function getData() {
     for i in $(seq 1 $nbLine); do
         # clear
         show="Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
-        if [ $debug -eq 0 ]; then
-            echo -en "$show \r"
-        else
-            echo $show
-        fi
+        [ $debug -eq 0 ] && echo -en "$show \r" || echo $show
 
         data[$i]=$(${dataRequest[$i,2]}) # execute la commande
 
@@ -338,10 +375,16 @@ function evaluation() {
     getData
     formatJson
 
-    curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
+    if [ $graph -eq 1 ]; then
+        curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST | zenity --text-info
+    else
+        curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
+    fi
 }
 
-function normalMode() {
+function normalModeText() {
+    lauchMarionnet
+
     while [ "$choice" != "n" ]; do
         choice=""
         while [ "A$choice" = "A" ] || [ "$choice" != "y" ] && [ "$choice" != "n" ]; do
@@ -361,12 +404,28 @@ function normalMode() {
     done
 }
 
+function normalModeGraph() {
+    lauchMarionnet
+
+    if zenity --question --text "Would you like to be evaluated"; then
+        res=$(ps aux | grep marionnet | grep $projectName | wc -l)
+        if [ $res -eq 1 ]; then 
+            evaluation
+        else 
+            echo "Marionnet not launch"
+            exit 1
+        fi
+    else
+        echo "Good bye"
+    fi
+}
+
 function timerGraph() {
-    local percent=0
+    #local percent=0
     for sec in $(seq 0 $timing); do
         echo "# $((timing - sec)) second"
-        percent=$((100 * sec / timing))
-        echo $percent
+        # percent=$((100 * sec / timing))
+        echo $((100 * sec / timing))
         sleep 1
     done | zenity --progress --percentage=0
 }
@@ -379,10 +438,11 @@ function timerText() {
 }
 
 function examMode() {
-    input
+    [ $graph -eq 1 ] && inputGraph || inputText
+    lauchMarionnet
 
     echo "Your are in exam mode, you have $timing seconds ..."
-    timerText
+    [ $graph -eq 1 ] && timerGraph || timerText
 
     evaluation
 }
@@ -390,4 +450,8 @@ function examMode() {
 installDep
 verifDeamon
 getMarionetFile
-[ $exam -eq 1 ] && examMode || normalMode
+if [ $exam -eq 1 ]; then
+    examMode
+else
+    [ $graph -eq 1 ] && normalModeGraph || normalModeText
+fi

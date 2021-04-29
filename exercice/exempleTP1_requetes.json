@@ -1,109 +1,109 @@
 [
     {
-        "label" : "ip_R1_eth0",
+        "label" : "ip R1 eth0",
         "command" : "marioSsh R1 /sbin/ifconfig eth0  |grep 'inet ' | sed -e 's/^[ ]*inet \\([^ ]*\\) .*$/\\1/'",
         "responses" : [
-            {"regex" : "10\\.0\\.0\\.254", "comment" : "oui très bien","pts" : 1},
-            {"regex" : ".*", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
+            {"equal" : "10.0.0.254", "comment" : "oui très bien","pts" : 1},
+            {"default" : "", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "mask_R1_eth0",
+        "label" : "mask R1 eth0",
         "command" : "marioSsh R1 /sbin/ifconfig eth0 |grep 'netmask ' | sed -e 's/^[ ]*Mask:\\([^ ]*\\)$/\\1/'",
         "responses" : [
             {"regex" : "255\\.255\\.0\\.0", "comment" : "oui très bien", "pts" : 1},
-            {"regex" : ".*", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
+            {"default" : "", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "ip_R1_eth1",
+        "label" : "ip R1 eth1",
         "command" : "getIPAddress R1 eth1",
         "responses" : [
-            {"regex" : "11\\.0\\.1\\.254", "comment" : "oui très bien","pts" : 1},
-            {"regex" : ".*", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
+            {"equal" : "11.0.1.254", "comment" : "oui très bien","pts" : 1},
+            {"default" : "", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "mask_R1_eth1",
+        "label" : "mask R1 eth1",
         "command" : "getMask R1 eth1",
         "responses" : [
-            {"regex" : "255\\.255\\.255\\.0", "comment" : "oui très bien", "pts" : 1},
-            {"regex" : ".*", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
+            {"equal" : "255.255.255.0", "comment" : "oui très bien", "pts" : 1},
+            {"default" : "", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "ip_m1_eth0",
+        "label" : "ip m1 eth0",
         "command" : "checkIP m1",
         "responses" : [
-            {"regex" : "ok", "comment" : "oui très bien","pts" : 1},
-            {"regex" : ".*", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
+            {"equal" : "ok", "comment" : "oui très bien","pts" : 1},
+            {"default" : "", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "mask_m1_eth0",
+        "label" : "mask m1 eth0",
         "command" : "getMask m1",
         "responses" : [
-            {"regex" : "255\\.255\\.0\\.0", "comment" : "oui très bien", "pts" : 1},
-            {"regex" : ".*", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
+            {"equal" : "255.255.0.0", "comment" : "oui très bien", "pts" : 1},
+            {"default" : "", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "ip_m2_eth0",
+        "label" : "ip m2 eth0",
         "command" : "getIPAddress m2",
         "responses" : [
-            {"regex" : "11\\.0\\.1\\.1", "comment" : "oui très bien","pts" : 1},
-            {"regex" : ".*", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
+            {"regex" : "11\\.0\\.1\\..*", "comment" : "oui très bien","pts" : 1},
+            {"default" : "", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "mask_m2_eth0",
+        "label" : "mask m2 eth0",
         "command" : "getMask m2",
         "responses" : [
-            {"regex" : "255\\.255\\.255\\.0", "comment" : "oui très bien", "pts" : 1},
-            {"regex" : ".*", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
+            {"equal" : "255.255.255.0", "comment" : "oui très bien", "pts" : 1},
+            {"default" : "", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "test_switch",
+        "label" : "test switch",
         "command" : "testPresence S1",
         "responses" : [
-            {"regex" : "ok", "comment" : "oui très bien", "pts" : 0.5},
-            {"regex" : ".*", "comment" : "aucun switch trouvé", "pts" : 0}
+            {"equal" : "ok", "comment" : "oui très bien", "pts" : 0.5},
+            {"default" : "", "comment" : "aucun switch trouvé", "pts" : 0}
         ],
         "bareme" : 0.5
     },
     {
-        "label" : "test_hub",
+        "label" : "test hub",
         "command" : "testPresence H1",
         "responses" : [
-            {"regex" : "ok", "comment" : "oui très bien", "pts" : 0.5},
-            {"regex" : ".*", "comment" : "aucun hub trouvé", "pts" : 0}
+            {"equal" : "ok", "comment" : "oui très bien", "pts" : 0.5},
+            {"default" : "", "comment" : "aucun hub trouvé", "pts" : 0}
         ],
         "bareme" : 0.5
     },
     {
-        "label" : "ping_m1",
+        "label" : "ping m1",
         "command" : "marioSsh m1 ping -c 1 -w 1 10.0.0.254 > /dev/null && echo ok",
         "responses" : [
-            {"regex" : "ok", "comment" : "oui très bien", "pts" : 1},
-            {"regex" : ".*", "comment" : "le ping n'a pas réussi", "pts" : 0}
+            {"equal" : "ok", "comment" : "oui très bien", "pts" : 1},
+            {"default" : "", "comment" : "le ping n'a pas réussi", "pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "ping_m2",
+        "label" : "ping m2",
         "command" : "marioSsh m2 ping -c 1 -w 1 11.0.1.254 > /dev/null && echo ok",
         "responses" : [
-            {"regex" : "ok", "comment" : "oui très bien", "pts" : 1},
-            {"regex" : ".*", "comment" : "le ping n'a pas réussi", "pts" : 0}
+            {"equal" : "ok", "comment" : "oui très bien", "pts" : 1},
+            {"default" : "", "comment" : "le ping n'a pas réussi", "pts" : 0}
         ],
         "bareme" : 1
     },
@@ -111,65 +111,65 @@
         "label" : "pingM1aM2",
         "command" : "pingMachine m1 m2",
         "responses" : [
-            {"regex" : "ok", "comment" : "oui très bien", "pts" : 1},
-            {"regex" : ".*", "comment" : "le ping n'a pas réussi", "pts" : 0}
+            {"equal" : "ok", "comment" : "oui très bien", "pts" : 1},
+            {"default" : "", "comment" : "le ping n'a pas réussi", "pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "web_m2",
+        "label" : "service web m2",
         "command" : "marioSsh m2 netstat -ant  |grep -q '0.0.0.0:80' && echo ok",
         "responses" : [
-            {"regex" : "ok", "comment" : "oui très bien", "pts" : 0.5},
-            {"regex" : ".*", "comment" : "le service web n'est pas lancé", "pts" : 0}
+            {"equal" : "ok", "comment" : "oui très bien", "pts" : 0.5},
+            {"default" : "", "comment" : "le service web n'est pas lancé", "pts" : 0}
         ],
         "bareme" : 0.5
     },
     {
-        "label" : "default_m1",
+        "label" : "default m1",
         "command" : "marioSsh m1 route -n | grep '^0.0.0.0'",
         "responses" : [
             {"regex" : "10\\.0\\.0\\.254", "comment" : "oui très bien", "pts" : 1},
-            {"regex" : ".*", "comment" : "il manque une route default", "pts" : 0}
+            {"default" : "", "comment" : "il manque une route default", "pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "default_m2",
+        "label" : "default m2",
         "command" : "getRoute m2 default",
         "responses" : [
             {"regex" : "11\\.0\\.1\\.254", "comment" : "oui très bien", "pts" : 1},
-            {"regex" : ".*", "comment" : "il manque une route default", "pts" : 0}
+            {"default" : "", "comment" : "il manque une route default", "pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "cable_S1aM1",
+        "label" : "cable S1aM1",
         "command" : "getCable S1 m1",
         "responses" : [
             {"regex" : "direct .* S1 m1", "comment" : "oui très bien", "pts" : 1},
             {"regex" : "cross .* S1 m1", "comment" : "il y a un cable mais il n'est pas du bon type", "pts" : 0.5},
-            {"regex" : ".*", "comment" : "il manque un cable", "pts" : 0}
+            {"default" : "", "comment" : "il manque un cable", "pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "cable_M1aS1",
+        "label" : "cable M1aS1",
         "command" : "getCable m1 S1",
         "responses" : [
             {"regex" : "direct .* m1 S1", "comment" : "oui très bien", "pts" : 1},
             {"regex" : "cross .* m1 S1", "comment" : "il y a un cable mais il n'est pas du bon type", "pts" : 0.5},
-            {"regex" : ".*", "comment" : "il manque un cable", "pts" : 0}
+            {"default" : "", "comment" : "il manque un cable", "pts" : 0}
         ],
         "bareme" : 1
     },
     {
-        "label" : "cable_R1aH1",
+        "label" : "cable R1aH1",
         "command" : "getCable R1 H1",
         "responses" : [
             {"regex" : "direct .* R1 H1", "comment" : "oui très bien", "pts" : 1},
             {"regex" : "cross .* R1 H1", "comment" : "il y a un cable mais il n'est pas du bon type", "pts" : 0.5},
-            {"regex" : ".*", "comment" : "il manque un cable", "pts" : 0}
+            {"default" : "", "comment" : "il manque un cable", "pts" : 0}
         ],
         "bareme" : 1
     }
