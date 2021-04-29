@@ -5,12 +5,12 @@ distrib=""
 
 serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
 serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
-source="marioTestFile" # le dossier ou chercher les fichiers
+source="marioTestJson" # le dossier ou chercher les fichiers
 # serverPOST="http://192.168.1.24/server/"
 
-packages="zenity curl ssh"
+packages="zenity curl ssh jq"
 projectName="example_TP1.mar"
-requestName="exempleTP1_requetes.txt"
+requestName="exempleTP1_requetes.json"
 idSsh="id_rsa_marionnet"
 # scripts="marionnet_getVar marionnet_list marionnet_ssh"
 file="$projectName $requestName $idSsh"
@@ -91,35 +91,6 @@ function marioSsh() {
     ssh -xq -i $PRIVATE_RSA_KEY root@$ip $Cmd
 }
 
-# marioList <void>
-function marioList() {
-    local cde=$0
-
-    #-- Checks
-
-    if [ "A$TMPDIR" = "A" ]; then
-        TMPDIR=/tmp
-    fi
-
-    local resu=`ls -d $TMPDIR/marionnet-*.dir 2> /dev/null`
-    if [ "A$resu" = "A" ]; then
-        echo "ERROR: No marionnet dir found in $TMPDIR, is it running ?"
-        exit 1
-    fi
-    if [ `echo $resu | wc -l` -gt 1 ]; then
-        echo "ERROR: more than one instance of marionnet detected, may be
-        something wrong happened to some of them ?"
-        echo "Please correct this first !"
-        exit 1
-    fi
-
-    local projectDIR=$(ls -d $TMPDIR/marionnet-*.dir)
-    cd $projectDIR
-    local projectName=$(ls |egrep -v '^(hub|hublet|switch|sparse-swap)-')
-
-    cat $projectDIR/$projectName/tmp/sketch.dot | grep '\w[^(edge)\[] \[' | awk '{print $1 " "}' | tr -d '\n'
-}
-
 # cidr2mask <cidr>
 function cidr2mask() {
    set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
@@ -130,7 +101,8 @@ function cidr2mask() {
 # testPresence <machine>
 function testPresence() {
     if [ "A$1" != "A" ]; then
-        marioList | grep -o "$1" > /dev/null && echo ok
+        local res=$(ps aw | grep marionnet | grep "$1" | head -1)
+        [ "A$res" != "A" ] && echo ok
     fi
 }
 
@@ -155,8 +127,7 @@ function getMask() {
 function getRoute() {
     if [ "A$1" != "A" ] && [ "A$2" != "A" ]; then
         local route=$([ "$2" = "default" ] && echo '0.0.0.0' || echo $2)
-        local count=$(marioSsh $1 route -n | grep "^$route" | wc -l)
-        [ $count -eq 1 ] && marioSsh $1 route -n | grep "^$route"
+        marioSsh $1 route -n | grep "^$route"
     fi
 }
 
@@ -285,25 +256,20 @@ function getMarionetFile() {
 
 function parseRequest() {
     echo "Parsing request ..."
-    local i=0
+    nbLine=$(grep label $requestName | wc -l)
+    local l=0
 
-    while read line; do
-        if echo $line | grep '^[^#]' &> /dev/null; then
-            i=$((i + 1))
-            for j in {1..4}; do
-                dataRequest[$i,$j]=$(echo $line | cut -d ';' -f $j)
-            done
-        fi
-    done < $requestName
+    for i in $(seq 0 $((nbLine - 1))); do
+        l=$((i+1))
+        dataRequest[$l,1]=$(jq -r ".[$i].label" < $requestName)
+        dataRequest[$l,2]=$(jq -r ".[$i].command" < $requestName)
+    done
 
-    nbLine=$i
     echo "$nbLine request found"
 }
 
 function parseCable() {
     local pName=$(echo $projectName | cut -d . -f 1)
-    local seenD=0
-    local seenC=0
     local patternD='DIRECT CABLE EDGES'
     local patternC='CROSSOVER/SERIAL CABLE EDGES'
     local char=""
@@ -313,14 +279,8 @@ function parseCable() {
 
     while read line ; do
         if [ "$(echo $line)" == "$patternD" ]; then
-            seenD=1;seenC=0
-        elif [ "$(echo $line)" == "$patternC" ]; then
-            seenD=0;seenC=1
-        fi
-
-        if [ $seenD -eq 1 ]; then
             char='direct'
-        elif [ $seenC -eq 1 ]; then
+        elif [ "$(echo $line)" == "$patternC" ]; then
             char='cross'
         fi
 
@@ -351,11 +311,19 @@ function formatJson() {
 }
 
 function getData() {
+    local show=""
     for i in $(seq 1 $nbLine); do
         # clear
-        echo -en "Getting data $i/$nbLine : ${dataRequest[$i,1]} ...\r"
+        show="Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
+        if [ $debug -eq 0 ]; then
+            echo -en "$show \r"
+        else
+            echo $show
+        fi
+
         data[$i]=$(${dataRequest[$i,2]}) # execute la commande
 
+        # echo ${dataRequest[$i,1]}
         # echo ${dataRequest[$i,2]}
         # echo ${data[$i]}
     done
@@ -405,8 +373,7 @@ function timerGraph() {
 
 function timerText() {
     for sec in $(seq 0 $timing); do
-        clear
-        echo "$((timing - sec)) second left ..."
+        echo -en "$((timing - sec)) second left ...\r"
         sleep 1
     done
 }

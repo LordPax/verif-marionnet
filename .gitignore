@@ -1,5 +1,6 @@
 client/*.mar
 client/*.txt
+client/*.json
 client/id_rsa_marionnet
 client/script
 server/log
