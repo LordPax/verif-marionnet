@@ -10,9 +10,9 @@
 
     $normalLogFile='/home/gauthier/verif-marionnet/server/log/normal.log';
     $examLogFile='/home/gauthier/verif-marionnet/server/log/exam.log';
-    $logFile = $mode == 1 ? $examLogFile : $normalLogFile;
-    $requestFile='/home/gauthier/public_html/'.$source.'/exempleTP1_requetes.json';
-    // $requestFile='/home/lordpax/Documents/Programmation/Bash/verif-marionnet/server/exempleTP1_requetes.txt';
+    $logFile = $mode === 1 ? $examLogFile : $normalLogFile;
+    // $requestFile='/home/gauthier/public_html/'.$source.'/exempleTP1_requetes.json';
+    $requestFile='/srv/http/server/exempleTP1_requetes.json';
 
     $show = '';
     $log = '';
@@ -28,11 +28,17 @@
     $pts = 0;
     $comment = "";
     
-    foreach ($data->data as $k => $v) {
+    foreach ($data->data as $k => $v) { 
         $bareme = !empty($content[$k]->bareme) ? $content[$k]->bareme : 1;
 
         for ($i = 0; $valid === 0 && $i < count($content[$k]->responses); $i++) {
-            $valid = preg_match('/'.$content[$k]->responses[$i]->regex.'/', $v);
+            if (isset($content[$k]->responses[$i]->regex))
+                $valid = preg_match('/'.$content[$k]->responses[$i]->regex.'/', $v);
+            else if (isset($content[$k]->responses[$i]->equal))
+                $valid = $content[$k]->responses[$i]->equal === $v ? 1 : 0;
+            else
+                $valid = 1;
+            
             if ($valid === 1) {
                 $pts = $content[$k]->responses[$i]->pts;
                 $comment = $content[$k]->responses[$i]->comment;
@@ -42,7 +48,7 @@
         $totPts += $bareme;
         $note += $pts;
  
-        $show .= $content[$k]->label." :\t ".$pts.'/'.$bareme." \t".$comment."\n";
+        $show .= $content[$k]->label." \t ".$pts.'/'.$bareme." \t".$comment."\n";
 
         $pts = 0;
         $comment = "";
@@ -53,12 +59,12 @@
     $note20 = round(20 * $note / $totPts, 2);
     $show .= "Your grade is $note/$totPts => $note20/20 \n";
 
-    if ($mode == 1)
+    /*if ($mode == 1)
         $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20; firstName:$data->firstName; name:$data->name; idExam:$data->idExam\n";
     else
         $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20\n";
 
-    file_put_contents($logFile, $log, FILE_APPEND);
+    file_put_contents($logFile, $log, FILE_APPEND);*/
 
     echo $show;
 ?>

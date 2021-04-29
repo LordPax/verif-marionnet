@@ -6,3 +6,4 @@ client/examMario
 client/script
 server/log
 server/*.txt
+server/*.json
