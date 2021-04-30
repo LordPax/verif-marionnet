@@ -104,12 +104,12 @@
 
     $show .= "\e[1mYour grade is $note/$totPts => $color$note20/20\e[0m\n";
 
-    // if ($mode == 1)
-    //     $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20; firstName:$data->firstName; name:$data->name; idExam:$data->idExam\n";
-    // else
-    //     $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20\n";
+    if ($mode == 1)
+        $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20; firstName:$data->firstName; name:$data->name; idExam:$data->idExam\n";
+    else
+        $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20\n";
 
-    // file_put_contents($logFile, $log, FILE_APPEND);
+    file_put_contents($logFile, $log, FILE_APPEND);
 
     echo $show;
 ?>
