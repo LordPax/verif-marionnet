@@ -8,13 +8,13 @@ serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
 # serverPOST="http://192.168.1.24/server/eval.php"
 source="marioTestJson" # le dossier ou chercher les fichiers
 
-packages="zenity curl ssh jq"
+packages="zenity curl ssh jq yad"
 projectName="example_TP1.mar"
 requestName="exempleTP1_requetes.json"
 idSsh="id_rsa_marionnet"
 # scripts="marionnet_getVar marionnet_list marionnet_ssh"
 file="$projectName $requestName $idSsh"
-timing=20 # temps en seconde
+timing=600 # temps en seconde
 
 name=""
 firstName=""
@@ -41,6 +41,7 @@ Option :
 debug=0
 graph=0
 exam=$([ $0 == './examMario' ] && echo 1 || echo 0)
+TMPDIR=$([ "A$TMPDIR" = "A" ] && echo /tmp || echo $TMPDIR)
 
 if [ $# -ge 1 ]; then
     for i in $(seq 1 $#); do
@@ -48,7 +49,7 @@ if [ $# -ge 1 ]; then
         elif [ "$1" == "--graph" ]; then graph=1
         elif [ "$1" == "--help" ]; then helpFunc
         else
-            echo "Enknown parameter" > /dev/stderr
+            echo -e "\e[31mERROR :\e[0m Unknown parameter" > /dev/stderr
             exit 1
         fi
         shift
@@ -68,36 +69,20 @@ function marioSsh() {
         exit 1
     fi
 
-    if [ "A$TMPDIR" = "A" ]; then
-        TMPDIR=/tmp
-    fi
-
-    local resu=`ls -d $TMPDIR/marionnet-*.dir 2> /dev/null`
-    if [ "A$resu" = "A" ]; then
-        echo "ERROR: No marionnet dir found in $TMPDIR, is it running ?"
-        exit 1
-    fi
-    if [ `echo $resu | wc -l` -gt 1 ]; then
-        echo "ERROR: more than one instance of marionnet detected, may be
-        something wrong happened to some of them ?"
-        echo "Please correct this first !"
-        exit 1
-    fi
-
     local Host="$1"
     shift
     Cmd="$*"
 
     resu=`ps aw |grep marionnet|grep "hostname=$Host "|head -1|sed -e 's/^.* eth42=\([^ ]*\) .*$/\1/'`'/'
     if [ "$resu" = "/" ] ; then
-        echo "ERROR : machine $Host not found in current marionnet project"
+        echo "\e[31mERROR :\e[0m machine $Host not found in current marionnet project" > /dev/stderr
         exit 1
     fi
 
     local tap=`echo $resu | cut -d ',' -f 2`
 
     if [ "A$tap" = "A" ]; then
-        echo "ERROR: no tap found"
+        echo "\e[31mERROR :\e[0m no tap found" > /dev/stderr
         exit 1
     fi
 
@@ -251,14 +236,26 @@ function inputGraph() {
     fi
 }
 
-function verifDeamon() {
-    res=$(ps aux | grep marionnet | grep daemon.native | wc -l)
+function verification() {
+    local res=$(ps aux | grep marionnet | grep daemon.native | wc -l)
     if [ $res -eq 1 ]; then
         [ $debug -eq 1 ] && echo "Marionnet daemon is already running"
     else
         sudo /etc/init.d/marionnet-daemon start
         echo "Marionnet daemon started"
     fi
+
+    res=$(ls -ld /tmp/marionnet-*.dir/)
+    if [ "A$res" = "A" ]; then
+        echo -e "\e[31mERROR :\e[0m No marionnet dir found in $TMPDIR, is it running ?" > /dev/stderr
+        exit 1
+    fi
+    if [ `echo $res | wc -l` -gt 1 ]; then
+        echo -e "\e[31mERROR :\e[0m more than one instance of marionnet detected, may be
+        something wrong happened to some of them ?" > /dev/stderr
+        exit 1
+    fi
+
 }
 
 function lauchMarionnet() {
@@ -296,7 +293,7 @@ function getMarionetFile() {
 }
 
 function parseRequest() {
-    echo "Parsing request ..."
+    [ $debug -eq 1 ] && echo "Parsing request ..."
     nbLine=$(grep label $requestName | wc -l)
     local l=0
 
@@ -316,7 +313,7 @@ function parseCable() {
     local char=""
     local i=0
     
-    echo "Parsing cable ..."
+    [ $debug -eq 1 ] && echo "Parsing cable ..."
 
     while read line ; do
         if [ "$(echo $line)" == "$patternD" ]; then
@@ -332,7 +329,7 @@ function parseCable() {
             i=$((i + 1))
             cable[$i]=$(echo $line | sed -e "s/^\([^:]*\):img:c -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \2 \1/")
         fi
-    done < /tmp/marionnet-*.dir/$pName/tmp/sketch.dot
+    done < $TMPDIR/marionnet-*.dir/$pName/tmp/sketch.dot
 
     nbCable=$i
 }
@@ -354,7 +351,6 @@ function formatJson() {
 function getData() {
     local show=""
     for i in $(seq 1 $nbLine); do
-        # clear
         show="Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
         [ $debug -eq 0 ] && echo -en "$show \r" || echo $show
 
@@ -448,7 +444,7 @@ function examMode() {
 }
 
 installDep
-verifDeamon
+verification
 getMarionetFile
 if [ $exam -eq 1 ]; then
     examMode
