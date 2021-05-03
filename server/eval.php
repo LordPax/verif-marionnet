@@ -12,12 +12,12 @@
      * @param range marge d'erreur
      * @param string une couleur
      */
-    function chooseColor($pts, $bareme, $range = 0) : string {
+    function chooseColor($pts, $bareme, $range = 0, $code = 0) : string {
         $col = "";
 
-        if ($pts >= $bareme - $range) $col = "\e[32m"; // vert si tout des points
-        else if ($pts <= 0 + $range) $col = "\e[31;1m"; // rouge si aucun des points
-        else $col = "\e[93;1m"; // jaune entre les 2
+        if ($pts >= $bareme - $range) $col = $code === 0 ? "\e[32m" : "green"; // vert si tout des points
+        else if ($pts <= 0 + $range) $col = $code === 0 ? "\e[31;1m" : "red"; // rouge si aucun des points
+        else $col = $code == 0 ? "\e[93;1m" : "orange"; // jaune entre les 2
 
         return $col;
     }
@@ -54,12 +54,13 @@
     $data = json_decode($input);
     $source = $data->source; 
     $mode = $data->examMode;
+    $graph = $data->graph;
 
     $normalLogFile='/home/gauthier/verif-marionnet/server/log/normal.log';
     $examLogFile='/home/gauthier/verif-marionnet/server/log/exam.log';
     $logFile = $mode === 1 ? $examLogFile : $normalLogFile;
-    // $requestFile='/home/gauthier/public_html/'.$source.'/exempleTP1_requetes.json';
-    $requestFile='/srv/http/server/exempleTP1_requetes.json';
+    $requestFile='/home/gauthier/public_html/'.$source.'/exempleTP1_requetes.json';
+    // $requestFile='/srv/http/server/exempleTP1_requetes.json';
 
     $show = '';
     $log = '';
@@ -81,7 +82,7 @@
 
         for ($i = 0; $valid === 0 && $i < count($content[$k]->responses); $i++) {
             $valid = validResponse($content[$k]->responses[$i], $v);
-            $color = chooseColor($content[$k]->responses[$i]->pts, $bareme);
+            $color = chooseColor($content[$k]->responses[$i]->pts, $bareme, 0, $graph);
             
             if ($valid === 1) {
                 $pts = $content[$k]->responses[$i]->pts;
@@ -92,7 +93,10 @@
         $totPts += $bareme;
         $note += $pts;
  
-        $show .= $content[$k]->label." \t $color$pts/$bareme \t $comment\e[0m\n";
+        if ($graph == 0)
+            $show .= $content[$k]->label." \t $color$pts/$bareme \t $comment\e[0m\n";
+        else
+            $show .= $content[$k]->label."; $pts/$bareme; $comment; $color\n";
 
         $pts = 0;
         $comment = "";
@@ -100,9 +104,12 @@
     }
 
     $note20 = round(20 * $note / $totPts, 2);
-    $color = chooseColor($note20, 20, 5);
+    $color = chooseColor($note20, 20, 5, $graph);
 
-    $show .= "\e[1mYour grade is $note/$totPts => $color$note20/20\e[0m\n";
+    if ($graph == 0)
+        $show .= "\e[1mYour grade is $note/$totPts => $color$note20/20\e[0m\n";
+    else
+        $show .= ";; Your grade si $note/$totPts => $note20/20; $color";
 
     if ($mode == 1)
         $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20; firstName:$data->firstName; name:$data->name; idExam:$data->idExam\n";
