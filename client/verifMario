@@ -8,18 +8,23 @@ serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
 # serverPOST="http://192.168.1.24/server/eval.php"
 source="marioTestJson" # le dossier ou chercher les fichiers
 
-packages="zenity curl ssh jq yad"
+packages="curl ssh jq yad"
 projectName="example_TP1.mar"
 requestName="exempleTP1_requetes.json"
 idSsh="id_rsa_marionnet"
 # scripts="marionnet_getVar marionnet_list marionnet_ssh"
 file="$projectName $requestName $idSsh"
-timing=600 # temps en seconde
+timing=10 # temps en seconde
+PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
+LOGFILE=$(mktemp -u)
+touch $LOGFILE
+
 
 name=""
 firstName=""
 idExam=""
 choice=""
+back=0
 
 declare -A dataRequest
 declare data
@@ -221,11 +226,10 @@ function inputText() {
 }
 
 function inputGraph() {
-    local output=$(zenity --forms --title "input" \
-    --text "Enter your informations" \
-    --add-entry "Enter your first name" \
-    --add-entry "Enter your name" \
-    --add-entry "Enter your exam id")
+    local output=$(yad --form --title "input" \
+    --field "Enter your first name" \
+    --field "Enter your name" \
+    --field "Enter your exam id")
 
     if echo $output | grep -E ".+\|.+\|.+" &> /dev/null; then
         firstName=$(echo $output | cut -d '|' -f 1)
@@ -244,18 +248,6 @@ function verification() {
         sudo /etc/init.d/marionnet-daemon start
         echo "Marionnet daemon started"
     fi
-
-    res=$(ls -ld /tmp/marionnet-*.dir/)
-    if [ "A$res" = "A" ]; then
-        echo -e "\e[31mERROR :\e[0m No marionnet dir found in $TMPDIR, is it running ?" > /dev/stderr
-        exit 1
-    fi
-    if [ `echo $res | wc -l` -gt 1 ]; then
-        echo -e "\e[31mERROR :\e[0m more than one instance of marionnet detected, may be
-        something wrong happened to some of them ?" > /dev/stderr
-        exit 1
-    fi
-
 }
 
 function lauchMarionnet() {
@@ -268,7 +260,7 @@ function lauchMarionnet() {
             [ $debug -eq 1 ] && echo "Marionnet already running"
         fi
     else
-        echo "Marionnet project does not exist"
+        echo -e "\e[31mERROR :\e[0m Marionnet project does not exist"
         exit 1
     fi
 }
@@ -303,7 +295,7 @@ function parseRequest() {
         dataRequest[$l,2]=$(jq -r ".[$i].command" < $requestName)
     done
 
-    echo "$nbLine request found"
+    [ $graph -eq 0 ] && echo "$nbLine request found"
 }
 
 function parseCable() {
@@ -339,7 +331,7 @@ function formatJson() {
     for i in $(seq 1 $(( nbLine-1 ))); do
         send="$send\"${data[$i]}\","
     done
-    send="$send\"${data[$nbLine]}\"], \"source\":\"$source\", \"examMode\":\"$exam\""
+    send="$send\"${data[$nbLine]}\"], \"source\":\"$source\", \"examMode\":$exam, \"graph\":$graph"
 
     if [ $exam -eq 1 ]; then
         send="$send, \"firstName\":\"$firstName\", \"name\":\"$name\", \"idExam\":\"$idExam\"}"
@@ -348,7 +340,7 @@ function formatJson() {
     fi
 }
 
-function getData() {
+function getDataText() {
     local show=""
     for i in $(seq 1 $nbLine); do
         show="Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
@@ -363,16 +355,46 @@ function getData() {
     echo "======================Result======================"
 }
 
+function getDataGraph() {
+    local tmp=""
+    for i in $(seq 1 $nbLine); do
+        echo "# Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
+        echo $((100 * $i / $nbLine))
+        echo $(${dataRequest[$i,2]}) >> $LOGFILE
+    done | yad --progress --percentage=0 --auto-close
+
+    local i=1
+    while read line ; do
+        data[$i]=$line
+        i=$((i + 1))
+    done < $LOGFILE
+    echo -n "" > $LOGFILE
+}
+
 function evaluation() {
-    echo "Evaluation in progress ..."
+    [ $graph -eq 0 ] && echo "Evaluation in progress ..."
 
     parseRequest
     parseCable
-    getData
+    [ $graph -eq 1 ] && getDataGraph || getDataText
     formatJson
 
     if [ $graph -eq 1 ]; then
-        curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST | zenity --text-info
+        curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST |  awk -F ';' "$PARSER" |\
+        yad --window-icon="gtk-execute" \
+        --title="Vérif Marionnet"  \
+        --button=Réévaluer:0 \
+        --button=gtk-close:1 \
+        --geometry 600x350 --mouse --on-top \
+        --list --no-click --no-selection \
+        --text-align=center --text="Résultats" \
+        --tail \
+        --column CheckID:TXT \
+        --column Note:TXT \
+        --column Message:TXT \
+        --column @back@
+
+        back=$?
     else
         curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
     fi
@@ -391,7 +413,7 @@ function normalModeText() {
             if [ $res -eq 1 ]; then 
                 evaluation
             else 
-                echo "Marionnet not launch"
+                echo -e "\e[31mERROR :\e[0m Marionnet not launch"
                 exit 1
             fi
         else
@@ -402,28 +424,28 @@ function normalModeText() {
 
 function normalModeGraph() {
     lauchMarionnet
-
-    if zenity --question --text "Would you like to be evaluated"; then
-        res=$(ps aux | grep marionnet | grep $projectName | wc -l)
-        if [ $res -eq 1 ]; then 
-            evaluation
-        else 
-            echo "Marionnet not launch"
-            exit 1
+    yad --image dialog-question --title Alert --button=gtk-yes:0 --button=gtk-no:1 --text "Would you like to be evaluated"
+    back=$?
+    while [ $back -eq 0 ]; do
+        if [ $back -eq 0 ]; then
+            res=$(ps aux | grep marionnet | grep $projectName | wc -l)
+            if [ $res -eq 1 ]; then 
+                evaluation
+            else 
+                echo -e "\e[31mERROR :\e[0m Marionnet not launch"
+                exit 1
+            fi
         fi
-    else
-        echo "Good bye"
-    fi
+    done
+    echo "Good bye"
 }
 
 function timerGraph() {
-    #local percent=0
     for sec in $(seq 0 $timing); do
         echo "# $((timing - sec)) second"
-        # percent=$((100 * sec / timing))
         echo $((100 * sec / timing))
         sleep 1
-    done | zenity --progress --percentage=0
+    done | yad --progress --percentage=0 --auto-close
 }
 
 function timerText() {
@@ -433,13 +455,20 @@ function timerText() {
     done
 }
 
-function examMode() {
-    [ $graph -eq 1 ] && inputGraph || inputText
+function examModeText() {
+    inputText
     lauchMarionnet
 
     echo "Your are in exam mode, you have $timing seconds ..."
-    [ $graph -eq 1 ] && timerGraph || timerText
+    timerText
 
+    evaluation
+}
+
+function examModeGraph() {
+    inputGraph
+    lauchMarionnet
+    timerGraph
     evaluation
 }
 
@@ -447,7 +476,7 @@ installDep
 verification
 getMarionetFile
 if [ $exam -eq 1 ]; then
-    examMode
+    [ $graph -eq 1 ] && examModeGraph || examModeText
 else
     [ $graph -eq 1 ] && normalModeGraph || normalModeText
 fi
