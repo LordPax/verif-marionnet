@@ -12,13 +12,11 @@ packages="curl ssh jq yad"
 projectName="example_TP1.mar"
 requestName="exempleTP1_requetes.json"
 idSsh="id_rsa_marionnet"
-# scripts="marionnet_getVar marionnet_list marionnet_ssh"
 file="$projectName $requestName $idSsh"
 timing=10 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
 LOGFILE=$(mktemp -u)
 touch $LOGFILE
-
 
 name=""
 firstName=""
@@ -39,22 +37,22 @@ function helpFunc() {
 Option :
     --help ................ show help
     --debug ............... debug mode
-    --graph ............... graph mode"
+    --text ............... text mode"
     exit 0
 }
 
 debug=0
-graph=0
+graph=1
 exam=$([ $0 == './examMario' ] && echo 1 || echo 0)
 TMPDIR=$([ "A$TMPDIR" = "A" ] && echo /tmp || echo $TMPDIR)
 
 if [ $# -ge 1 ]; then
     for i in $(seq 1 $#); do
         if [ "$1" == "--debug" ]; then debug=1
-        elif [ "$1" == "--graph" ]; then graph=1
+        elif [ "$1" == "--text" ]; then graph=0
         elif [ "$1" == "--help" ]; then helpFunc
         else
-            echo -e "\e[31mERROR :\e[0m Unknown parameter" > /dev/stderr
+            echo -e "\e[31mERROR :\e[0m Paramètre inconnu" > /dev/stderr
             exit 1
         fi
         shift
@@ -80,14 +78,14 @@ function marioSsh() {
 
     resu=`ps aw |grep marionnet|grep "hostname=$Host "|head -1|sed -e 's/^.* eth42=\([^ ]*\) .*$/\1/'`'/'
     if [ "$resu" = "/" ] ; then
-        echo "\e[31mERROR :\e[0m machine $Host not found in current marionnet project" > /dev/stderr
+        echo "\e[31mERROR :\e[0m machine $Host non trouvé dans le projet marionnet" > /dev/stderr
         exit 1
     fi
 
     local tap=`echo $resu | cut -d ',' -f 2`
 
     if [ "A$tap" = "A" ]; then
-        echo "\e[31mERROR :\e[0m no tap found" > /dev/stderr
+        echo "\e[31mERROR :\e[0m Pas de tap trouvé" > /dev/stderr
         exit 1
     fi
 
@@ -229,14 +227,22 @@ function inputGraph() {
     local output=$(yad --form --title "input" \
     --field "Enter your first name" \
     --field "Enter your name" \
-    --field "Enter your exam id")
-
-    if echo $output | grep -E ".+\|.+\|.+" &> /dev/null; then
-        firstName=$(echo $output | cut -d '|' -f 1)
-        name=$(echo $output | cut -d '|' -f 2)
-        idExam=$(echo $output | cut -d '|' -f 3)
+    --field "Enter your exam id" \
+    --button=envoyer:0 \
+    --button=gtk-cancel:1 \
+    --on-top)
+    
+    if [ "A$output" != "A" ]; then
+        if echo $output | grep -E ".+\|.+\|.+" &> /dev/null; then
+            firstName=$(echo $output | cut -d '|' -f 1)
+            name=$(echo $output | cut -d '|' -f 2)
+            idExam=$(echo $output | cut -d '|' -f 3)
+        else
+            echo -e "\e[31mERROR :\e[0m Le format ne correspond pas"
+            inputGraph
+        fi
     else
-        inputGraph
+        exit 0
     fi
 }
 
@@ -260,7 +266,7 @@ function lauchMarionnet() {
             [ $debug -eq 1 ] && echo "Marionnet already running"
         fi
     else
-        echo -e "\e[31mERROR :\e[0m Marionnet project does not exist"
+        echo -e "\e[31mERROR :\e[0m Le projet marionnet n'éxiste pas"
         exit 1
     fi
 }
@@ -361,7 +367,7 @@ function getDataGraph() {
         echo "# Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
         echo $((100 * $i / $nbLine))
         echo $(${dataRequest[$i,2]}) >> $LOGFILE
-    done | yad --progress --percentage=0 --auto-close
+    done | yad --progress --percentage=0 --auto-close --on-top --title "Getting data"
 
     local i=1
     while read line ; do
@@ -385,7 +391,7 @@ function evaluation() {
         --title="Vérif Marionnet"  \
         --button=Réévaluer:0 \
         --button=gtk-close:1 \
-        --geometry 600x350 --mouse --on-top \
+        --geometry 600x350 --mouse \
         --list --no-click --no-selection \
         --text-align=center --text="Résultats" \
         --tail \
@@ -413,7 +419,7 @@ function normalModeText() {
             if [ $res -eq 1 ]; then 
                 evaluation
             else 
-                echo -e "\e[31mERROR :\e[0m Marionnet not launch"
+                echo -e "\e[31mERROR :\e[0m Marionnet n'est pas lancé"
                 exit 1
             fi
         else
@@ -424,17 +430,21 @@ function normalModeText() {
 
 function normalModeGraph() {
     lauchMarionnet
-    yad --image dialog-question --title Alert --button=gtk-yes:0 --button=gtk-no:1 --text "Would you like to be evaluated"
+    yad --image dialog-question \
+    --title Evaluation \
+    --button=gtk-yes:0 \
+    --button=gtk-no:1 \
+    --text "Would you like to be evaluated" \
+    --on-top
+
     back=$?
     while [ $back -eq 0 ]; do
-        if [ $back -eq 0 ]; then
-            res=$(ps aux | grep marionnet | grep $projectName | wc -l)
-            if [ $res -eq 1 ]; then 
-                evaluation
-            else 
-                echo -e "\e[31mERROR :\e[0m Marionnet not launch"
-                exit 1
-            fi
+        res=$(ps aux | grep marionnet | grep $projectName | wc -l)
+        if [ $res -eq 1 ]; then 
+            evaluation
+        else 
+            echo -e "\e[31mERROR :\e[0m Marionnet n'est pas lancé"
+            exit 1
         fi
     done
     echo "Good bye"
@@ -445,7 +455,7 @@ function timerGraph() {
         echo "# $((timing - sec)) second"
         echo $((100 * sec / timing))
         sleep 1
-    done | yad --progress --percentage=0 --auto-close
+    done | yad --progress --percentage=0 --auto-close --title Timer
 }
 
 function timerText() {
@@ -480,3 +490,5 @@ if [ $exam -eq 1 ]; then
 else
     [ $graph -eq 1 ] && normalModeGraph || normalModeText
 fi
+
+rm -f $LOGFILE
