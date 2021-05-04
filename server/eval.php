@@ -115,12 +115,11 @@
     else
         $show .= ";; Your grade is $note/$totPts => $note20/20; $color";
 
-    if ($mode == 1)
-        $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20; firstName:$data->firstName; name:$data->name; idExam:$data->idExam\n";
-    else
-        $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20\n";
     
-    $log .= $questionLog;
+    $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20";
+    if ($mode == 1)
+        $log .= "; firstName:$data->firstName; name:$data->name; idExam:$data->idExam";
+    $log .= "$questionLog\n";
 
     file_put_contents($logFile, $log, FILE_APPEND);
 
