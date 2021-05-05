@@ -57,10 +57,11 @@
     $mode = $data->examMode;
     $graph = $data->graph;
 
-    $normalLogFile='/home/gauthier/verif-marionnet/server/log/normal.log';
-    $examLogFile='/home/gauthier/verif-marionnet/server/log/exam.log';
+    $logDir='/home/gauthier/verif-marionnet/server/log/';
+    $normalLogFile="$logDir/$source-normal.log";
+    $examLogFile="$logDir/$source-exam.log";
     $logFile = $mode === 1 ? $examLogFile : $normalLogFile;
-    $requestFile='/home/gauthier/public_html/'.$source.'/exempleTP1_requetes.json';
+    $requestFile='/home/gauthier/public_html/'.$source.'/requetes.json';
     // $requestFile='/srv/http/server/exempleTP1_requetes.json';
 
     $show = '';
@@ -120,6 +121,7 @@
     if ($mode == 1)
         $log .= "; firstName:$data->firstName; name:$data->name; idExam:$data->idExam";
     $log .= "$questionLog\n";
+
 
     file_put_contents($logFile, $log, FILE_APPEND);
 
