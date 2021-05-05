@@ -156,11 +156,11 @@ direct d1 R1 S1
 Vérifie l'ip d'une machine en fonction du mask (affiche "ok" si il y parvient) (par défaut : interface=eth0)
 * syntax
 ```bash
-checkIP <machine> [interface]
+checkIP <machine> <net> [interface]
 ```
 * exemple
 ```bash
-checkIP R1
+checkIP R1 10.0.0.0
 ```
 
 ## Scenario

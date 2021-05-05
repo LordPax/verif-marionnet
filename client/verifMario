@@ -9,11 +9,11 @@ serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
 source="marioTestJson" # le dossier ou chercher les fichiers
 
 packages="curl ssh jq yad"
-projectName="example_TP1.mar"
-requestName="exempleTP1_requetes.json"
+projectName="exerciceTP.mar"
+requestName="requetes.json"
 idSsh="id_rsa_marionnet"
 file="$projectName $requestName $idSsh"
-timing=10 # temps en seconde
+timing=600 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
 LOGFILE=$(mktemp -u)
 touch $LOGFILE
@@ -35,9 +35,9 @@ function helpFunc() {
     echo "Usage : $0 [option]
 
 Option :
-    --help ................ show help
-    --debug ............... debug mode
-    --text ............... text mode"
+--help ................ show help
+--debug ............... debug mode
+--text ................ text mode"
     exit 0
 }
 
@@ -176,22 +176,22 @@ function getCable() {
     fi
 }
 
-# checkIP <machine> [interface]
+# checkIP <machine> <net> [interface]
 function checkIP() {
-    if [ "A$1" != "A" ]; then
-        local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
+    if [ "A$1" != "A" ] && [ "A$2" != "A" ]; then
+        local eth=$([ "A$3" != "A" ] && echo $3 || echo eth0)
         local mask=$(getMask $1 $eth)
         local ip=$(getIPAddress $1 $eth)
-        local net=$(getNet $1 $eth)
+        local net=$2
+        local res=""
+        local calc=""
 
-        local octMask=$(echo $mask | cut -d . -f 1)
-        local octIP=$(echo $ip | cut -d . -f 1)
-        local res=$(($octMask & $octIP))
-
-        for i in {2..4}; do
+        for i in {1..4}; do
             octMask=$(echo $mask | cut -d . -f $i)
             octIP=$(echo $ip | cut -d . -f $i)
-            res="$res.$(($octMask & $octIP))"
+
+            calc=$(($octMask & $octIP))
+            res=$([ $i -eq 1 ] && echo $calc || echo "$res.$calc")
         done
 
         [ "$res" = "$net" ] && echo ok
@@ -233,12 +233,12 @@ function inputGraph() {
     --on-top)
     
     if [ "A$output" != "A" ]; then
-        if echo $output | grep -E ".+\|.+\|.+" &> /dev/null; then
+        if echo $output | grep -E ".+\|.+\|.+\|" &> /dev/null; then
             firstName=$(echo $output | cut -d '|' -f 1)
             name=$(echo $output | cut -d '|' -f 2)
             idExam=$(echo $output | cut -d '|' -f 3)
         else
-            echo -e "\e[31mERROR :\e[0m Le format ne correspond pas"
+            echo -e "\e[31mERROR :\e[0m Tout les champs doivent être complété"
             inputGraph
         fi
     else
@@ -305,7 +305,8 @@ function parseRequest() {
 }
 
 function parseCable() {
-    local pName=$(echo $projectName | cut -d . -f 1)
+    # local pName=$(echo $projectName | cut -d . -f 1)
+    local pName=$(ls /tmp/marionnet-374202278.dir/ | grep -Ev "^(hub|hublet|sparse-swap|switch)-")
     local patternD='DIRECT CABLE EDGES'
     local patternC='CROSSOVER/SERIAL CABLE EDGES'
     local char=""
@@ -377,18 +378,24 @@ function getDataGraph() {
     echo -n "" > $LOGFILE
 }
 
-function evaluation() {
-    [ $graph -eq 0 ] && echo "Evaluation in progress ..."
-
-    parseRequest
-    parseCable
-    [ $graph -eq 1 ] && getDataGraph || getDataText
-    formatJson
-
-    if [ $graph -eq 1 ]; then
-        curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST |  awk -F ';' "$PARSER" |\
+function sendGraph() {
+    if [ $exam -eq 1 ]; then
+        curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST | awk -F ';' "$PARSER" |\
         yad --window-icon="gtk-execute" \
-        --title="Vérif Marionnet"  \
+        --title="Vérif Marionnet exam"  \
+        --button=gtk-close:1 \
+        --geometry 600x350 --mouse \
+        --list --no-click --no-selection \
+        --text-align=center --text="Résultats" \
+        --tail \
+        --column CheckID:TXT \
+        --column Note:TXT \
+        --column Message:TXT \
+        --column @back@
+    else
+        curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST | awk -F ';' "$PARSER" |\
+        yad --window-icon="gtk-execute" \
+        --title="Vérif Marionnet normal"  \
         --button=Réévaluer:0 \
         --button=gtk-close:1 \
         --geometry 600x350 --mouse \
@@ -399,8 +406,21 @@ function evaluation() {
         --column Note:TXT \
         --column Message:TXT \
         --column @back@
+    fi
 
-        back=$?
+    back=$?
+}
+
+function evaluation() {
+    [ $graph -eq 0 ] && echo "Evaluation in progress ..."
+
+    parseRequest
+    parseCable
+    [ $graph -eq 1 ] && getDataGraph || getDataText
+    formatJson
+
+    if [ $graph -eq 1 ]; then
+        sendGraph
     else
         curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
     fi
@@ -451,16 +471,23 @@ function normalModeGraph() {
 }
 
 function timerGraph() {
+    local timer=0
     for sec in $(seq 0 $timing); do
-        echo "# $((timing - sec)) second"
+        timer=$(date -d@$((timing - sec)) -u +%M:%S | awk -F : '{print $1, "min", $2, "s"}')
+        echo "# $timer left ..."
         echo $((100 * sec / timing))
         sleep 1
-    done | yad --progress --percentage=0 --auto-close --title Timer
+    done | yad --progress --percentage=0 \
+    --auto-close \
+    --title Timer \
+    --button "évaluer sans attendre:0"
 }
 
 function timerText() {
+    local timer=0
     for sec in $(seq 0 $timing); do
-        echo -en "$((timing - sec)) second left ...\r"
+        timer=$(date -d@$((timing - sec)) -u +%M:%S | awk -F : '{print $1, "min", $2, "s"}')
+        echo -en "$timer left ...\r"
         sleep 1
     done
 }
