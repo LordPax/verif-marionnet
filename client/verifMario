@@ -104,9 +104,9 @@ function marioSsh() {
 
 # cidr2mask <cidr>
 function cidr2mask() {
-   set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
-   [ $1 -gt 1 ] && shift $1 || shift
-   echo ${1-0}.${2-0}.${3-0}.${4-0}
+	set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
+	[ $1 -gt 1 ] && shift $1 || shift
+	echo ${1-0}.${2-0}.${3-0}.${4-0}
 }
 
 # testPresence <machine>
@@ -121,7 +121,7 @@ function testPresence() {
 function getIPAddress() {
     if [ "A$1" != "A" ]; then
         local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
-        marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d / -f 1
+        marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d '/' -f 1
     fi
 }
 
@@ -129,7 +129,7 @@ function getIPAddress() {
 function getMask() {
     if [ "A$1" != "A" ]; then
         local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
-        cidr=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d / -f 2)
+        cidr=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d '/' -f 2)
         cidr2mask $cidr
     fi
 }
@@ -187,8 +187,8 @@ function checkIP() {
         local calc=""
 
         for i in {1..4}; do
-            octMask=$(echo $mask | cut -d . -f $i)
-            octIP=$(echo $ip | cut -d . -f $i)
+            octMask=$(echo $mask | cut -d '.' -f $i)
+            octIP=$(echo $ip | cut -d '.' -f $i)
 
             calc=$(($octMask & $octIP))
             res=$([ $i -eq 1 ] && echo $calc || echo "$res.$calc")
@@ -305,8 +305,8 @@ function parseRequest() {
 }
 
 function parseCable() {
-    # local pName=$(echo $projectName | cut -d . -f 1)
-    local pName=$(ls /tmp/marionnet-374202278.dir/ | grep -Ev "^(hub|hublet|sparse-swap|switch)-")
+    # local pName=$(echo $projectName | cut -d . -f 1)
+    local pName=$(ls /tmp/marionnet-*.dir/ | grep -Ev "^(hub|hublet|sparse-swap|switch)-")
     local patternD='DIRECT CABLE EDGES'
     local patternC='CROSSOVER/SERIAL CABLE EDGES'
     local char=""
