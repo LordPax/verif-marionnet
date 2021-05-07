@@ -6,13 +6,14 @@ distrib=""
 serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
 serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
 # serverPOST="http://192.168.1.24/server/eval.php"
-source="marioTestJson" # le dossier ou chercher les fichiers
+# source="marioTestJson" # le dossier ou chercher les fichiers
 
 packages="curl ssh jq yad"
 projectName="exerciceTP.mar"
 requestName="requetes.json"
 idSsh="id_rsa_marionnet"
 file="$projectName $requestName $idSsh"
+prefixDir="exo"
 timing=600 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
 LOGFILE=$(mktemp -u)
@@ -46,13 +47,28 @@ graph=1
 exam=$([ $0 == './examMario' ] && echo 1 || echo 0)
 TMPDIR=$([ "A$TMPDIR" = "A" ] && echo /tmp || echo $TMPDIR)
 
+# echo_debug <msg> [sortie]
+function echo_debug() {
+    if [ "A$1" != "A" ]; then
+        local out=$([ "$2" = "err" ] && echo /dev/stderr || echo /dev/stdout) # sortir par défaut : stdout
+        [ $debug -eq 1 ] && echo -e $1 > $out
+    fi
+}
+
+# echo_err <msg>
+function echo_err() {
+    if [ "A$1" != "A" ]; then
+        echo -e "\e[31mERROR :\e[0m $1" > /dev/stderr
+    fi
+}
+
 if [ $# -ge 1 ]; then
     for i in $(seq 1 $#); do
         if [ "$1" == "--debug" ]; then debug=1
         elif [ "$1" == "--text" ]; then graph=0
         elif [ "$1" == "--help" ]; then helpFunc
         else
-            echo -e "\e[31mERROR :\e[0m Paramètre inconnu" > /dev/stderr
+            echo_err "Paramètre inconnu"
             exit 1
         fi
         shift
@@ -62,13 +78,13 @@ fi
 # marioSsh <machine> <cmd>
 function marioSsh() {
     local cde=$0
-    local PRIVATE_RSA_KEY=id_rsa_marionnet
+    local PRIVATE_RSA_KEY=$idExam/$idSsh
 
     # we need more checks
     #-- Checks
     if [ "A$2" = "A" ]; then
-        echo "Usage: $cde  host cmd"
-        echo "where host is the name of a virtual machine in marionnet"
+        echo "Usage: $cde  host cmd" > /dev/stderr
+        echo_err "where host is the name of a virtual machine in marionnet"
         exit 1
     fi
 
@@ -78,14 +94,14 @@ function marioSsh() {
 
     resu=`ps aw |grep marionnet|grep "hostname=$Host "|head -1|sed -e 's/^.* eth42=\([^ ]*\) .*$/\1/'`'/'
     if [ "$resu" = "/" ] ; then
-        echo "\e[31mERROR :\e[0m machine $Host non trouvé dans le projet marionnet" > /dev/stderr
+        echo_err "machine $Host non trouvé dans le projet marionnet"
         exit 1
     fi
 
     local tap=`echo $resu | cut -d ',' -f 2`
 
     if [ "A$tap" = "A" ]; then
-        echo "\e[31mERROR :\e[0m Pas de tap trouvé" > /dev/stderr
+        echo_err "Pas de tap trouvé"
         exit 1
     fi
 
@@ -100,13 +116,18 @@ function marioSsh() {
     fi
 
     ssh -xq -i $PRIVATE_RSA_KEY root@$ip $Cmd
+    if [ $? -eq 255 ]; then
+        echo_debug "\e[31mERROR :\e[0m Connexion ssh impossible avec $Host" err
+    fi
 }
 
 # cidr2mask <cidr>
 function cidr2mask() {
-	set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
-	[ $1 -gt 1 ] && shift $1 || shift
-	echo ${1-0}.${2-0}.${3-0}.${4-0}
+    if [ "A$1" != "A" ]; then
+        set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
+        [ $1 -gt 1 ] && shift $1 || shift
+        echo ${1-0}.${2-0}.${3-0}.${4-0}
+    fi
 }
 
 # testPresence <machine>
@@ -186,24 +207,26 @@ function checkIP() {
         local res=""
         local calc=""
 
-        for i in {1..4}; do
-            octMask=$(echo $mask | cut -d '.' -f $i)
-            octIP=$(echo $ip | cut -d '.' -f $i)
+        if [ "A$mask" != "A" ] && [ "A$ip" != "A" ]; then
+            for i in {1..4}; do
+                octMask=$(echo $mask | cut -d '.' -f $i)
+                octIP=$(echo $ip | cut -d '.' -f $i)
 
-            calc=$(($octMask & $octIP))
-            res=$([ $i -eq 1 ] && echo $calc || echo "$res.$calc")
-        done
+                calc=$(($octMask & $octIP))
+                res=$([ $i -eq 1 ] && echo $calc || echo "$res.$calc")
+            done
+        fi
 
         [ "$res" = "$net" ] && echo ok
     fi
 }
 
 function installDep() {
-    [ $debug -eq 1 ] && echo "Searching for dependance ..."
+    echo_debug "Searching for dependance ..."
     for p in $packages; do
         res=$(command -v $p | wc -l)
         if [ $res -eq 1 ]; then
-            [ $debug -eq 1 ] && echo "Package $p found"
+            echo_debug "Package $p found"
         else
             echo "Installing $p ..."
             sudo apt install $p
@@ -212,34 +235,53 @@ function installDep() {
 }
 
 function inputText() {
-    while [ "A$firstName" = "A" ]; do
-        read -p "Enter your first name : " firstName
-    done
-    while [ "A$name" = "A" ]; do
-        read -p "Enter your name : " name
-    done
+    if [ $exam -eq 1 ]; then
+        while [ "A$firstName" = "A" ]; do
+            read -p "Enter your first name : " firstName
+        done
+        while [ "A$name" = "A" ]; do
+            read -p "Enter your name : " name
+        done
+    fi
     while [ "A$idExam" = "A" ]; do
-        read -p "Enter your exam id : " idExam
+        read -p "Enter exercise name : " idExam
     done
 }
 
 function inputGraph() {
-    local output=$(yad --form --title "input" \
-    --field "Enter your first name" \
-    --field "Enter your name" \
-    --field "Enter your exam id" \
-    --button=envoyer:0 \
-    --button=gtk-cancel:1 \
-    --on-top)
+    if [ $exam -eq 1 ]; then
+        local output=$(yad --form --title "input" \
+        --field "Enter your first name" \
+        --field "Enter your name" \
+        --field "Enter exercise name" \
+        --button=envoyer:0 \
+        --button=gtk-cancel:1 \
+        --on-top)
+    else
+        local output=$(yad --form --title "input" \
+        --field "Enter exercise name" \
+        --button=envoyer:0 \
+        --button=gtk-cancel:1 \
+        --on-top)
+    fi
     
     if [ "A$output" != "A" ]; then
-        if echo $output | grep -E ".+\|.+\|.+\|" &> /dev/null; then
-            firstName=$(echo $output | cut -d '|' -f 1)
-            name=$(echo $output | cut -d '|' -f 2)
-            idExam=$(echo $output | cut -d '|' -f 3)
+        if [ $exam -eq 1 ]; then
+            if echo $output | grep -E ".+\|.+\|.+\|" &> /dev/null; then
+                firstName=$(echo $output | cut -d '|' -f 1)
+                name=$(echo $output | cut -d '|' -f 2)
+                idExam=$(echo $output | cut -d '|' -f 3)
+            else
+                echo_err "Tout les champs doivent être complété"
+                inputGraph
+            fi
         else
-            echo -e "\e[31mERROR :\e[0m Tout les champs doivent être complété"
-            inputGraph
+            if echo $output | grep -E ".+\|" &> /dev/null; then
+                idExam=$(echo $output | cut -d '|' -f 1)
+            else
+                echo_err "Tout les champs doivent être complété"
+                inputGraph
+            fi
         fi
     else
         exit 0
@@ -249,56 +291,70 @@ function inputGraph() {
 function verification() {
     local res=$(ps aux | grep marionnet | grep daemon.native | wc -l)
     if [ $res -eq 1 ]; then
-        [ $debug -eq 1 ] && echo "Marionnet daemon is already running"
+        echo_debug "Marionnet daemon is already running"
     else
         sudo /etc/init.d/marionnet-daemon start
         echo "Marionnet daemon started"
     fi
 }
 
-function lauchMarionnet() {
-    if [ -f $projectName ]; then
+function launchMarionnet() {
+    if [ -f $idExam/$projectName ]; then
         res=$(ps aux | grep marionnet | grep $projectName | wc -l)
         if [ $res -eq 0 ]; then 
-            marionnet $projectName 2> /dev/null &
+            marionnet $idExam/$projectName 2> /dev/null &
             echo "Marionnet started"
         else
-            [ $debug -eq 1 ] && echo "Marionnet already running"
+            echo_debug "Marionnet already running"
         fi
     else
-        echo -e "\e[31mERROR :\e[0m Le projet marionnet n'éxiste pas"
+        echo_err "Le projet marionnet $idExam/$projectName n'éxiste pas"
         exit 1
     fi
 }
 
 function getMarionetFile() {
+    if [ ! -d $idExam ]; then
+        mkdir $idExam
+    fi
+
     for f in $file; do
-        if [ ! -f $f ]; then
-            echo "Downloading $f ..."
-            curl -s $serverUrl/$source/$f -o $f
+        if [ ! -f $idExam/$f ]; then
+            echo "Downloading $idExam/$f ..."
+            curl -s $serverUrl/$idExam/$f -o $idExam/$f
+            if grep '404 Not Found' $idExam/$f &> /dev/null; then
+                rm -rf $idExam
+                echo_err "L'id $idExam n'existe pas"
+                exit 1
+            fi
         else
-            [ $debug -eq 1 ] && echo "$f already exist"
+            echo_debug "$idExam/$f already exist"
         fi
     done
 
-    if [ -f $idSsh ]; then
-        res=$(ls -l $idSsh | cut -d ' ' -f 1)
+    if [ -f $idExam/$idSsh ]; then
+        res=$(ls -l $idExam/$idSsh | cut -d ' ' -f 1)
         if [ $res != "-rw-------" ]; then
-            [ $debug -eq 1 ] && echo "Change chmod to 600"
-            chmod 600 $idSsh
+            echo_debug "Change chmod to 600"
+            chmod 600 $idExam/$idSsh
         fi
     fi
 }
 
 function parseRequest() {
-    [ $debug -eq 1 ] && echo "Parsing request ..."
-    nbLine=$(grep label $requestName | wc -l)
+    echo_debug "Parsing request ..."
+    nbLine=$(grep label $idExam/$requestName 2> /dev/null | wc -l)
     local l=0
+
+    if [ $nbLine -eq 0 ]; then
+        echo_err "Le fichier de requetes est vide ou n'existe pas"
+        exit 1
+    fi
 
     for i in $(seq 0 $((nbLine - 1))); do
         l=$((i+1))
-        dataRequest[$l,1]=$(jq -r ".[$i].label" < $requestName)
-        dataRequest[$l,2]=$(jq -r ".[$i].command" < $requestName)
+        dataRequest[$l,1]=$(jq -r ".[$i].label" < $idExam/$requestName)
+        dataRequest[$l,2]=$(jq -r ".[$i].command" < $idExam/$requestName)
     done
 
     [ $graph -eq 0 ] && echo "$nbLine request found"
@@ -306,13 +362,18 @@ function parseRequest() {
 
 function parseCable() {
     # local pName=$(echo $projectName | cut -d . -f 1)
-    local pName=$(ls /tmp/marionnet-*.dir/ | grep -Ev "^(hub|hublet|sparse-swap|switch)-")
+    local pName=$(ls $TMPDIR/marionnet-*.dir/ 2> /dev/null | grep -Ev "^(hub|hublet|sparse-swap|switch)-")
     local patternD='DIRECT CABLE EDGES'
     local patternC='CROSSOVER/SERIAL CABLE EDGES'
     local char=""
     local i=0
+
+    if [ "A$pName" = "A" ]; then
+        echo_err "Aucun projet trouvé"
+        exit 1
+    fi
     
-    [ $debug -eq 1 ] && echo "Parsing cable ..."
+    echo_debug "Parsing cable ..."
 
     while read line ; do
         if [ "$(echo $line)" == "$patternD" ]; then
@@ -338,10 +399,9 @@ function formatJson() {
     for i in $(seq 1 $(( nbLine-1 ))); do
         send="$send\"${data[$i]}\","
     done
-    send="$send\"${data[$nbLine]}\"], \"source\":\"$source\", \"examMode\":$exam, \"graph\":$graph"
-
+    send="$send\"${data[$nbLine]}\"], \"examMode\":$exam, \"graph\":$graph, \"idExam\":\"$idExam\""
     if [ $exam -eq 1 ]; then
-        send="$send, \"firstName\":\"$firstName\", \"name\":\"$name\", \"idExam\":\"$idExam\"}"
+        send="$send, \"firstName\":\"$firstName\", \"name\":\"$name\"}"
     else
         send="$send}"
     fi
@@ -395,8 +455,8 @@ function sendGraph() {
     else
         curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST | awk -F ';' "$PARSER" |\
         yad --window-icon="gtk-execute" \
-        --title="Vérif Marionnet normal"  \
-        --button=Réévaluer:0 \
+        --title="Vérif Marionnet"  \
+        --button=revérifier:0 \
         --button=gtk-close:1 \
         --geometry 600x350 --mouse \
         --list --no-click --no-selection \
@@ -427,7 +487,7 @@ function evaluation() {
 }
 
 function normalModeText() {
-    lauchMarionnet
+    launchMarionnet
 
     while [ "$choice" != "n" ]; do
         choice=""
@@ -439,7 +499,7 @@ function normalModeText() {
             if [ $res -eq 1 ]; then 
                 evaluation
             else 
-                echo -e "\e[31mERROR :\e[0m Marionnet n'est pas lancé"
+                echo_err "Marionnet n'est pas lancé"
                 exit 1
             fi
         else
@@ -449,7 +509,8 @@ function normalModeText() {
 }
 
 function normalModeGraph() {
-    lauchMarionnet
+    launchMarionnet
+
     yad --image dialog-question \
     --title Evaluation \
     --button=gtk-yes:0 \
@@ -463,7 +524,7 @@ function normalModeGraph() {
         if [ $res -eq 1 ]; then 
             evaluation
         else 
-            echo -e "\e[31mERROR :\e[0m Marionnet n'est pas lancé"
+            echo_err "Marionnet n'est pas lancé"
             exit 1
         fi
     done
@@ -493,8 +554,7 @@ function timerText() {
 }
 
 function examModeText() {
-    inputText
-    lauchMarionnet
+    launchMarionnet
 
     echo "Your are in exam mode, you have $timing seconds ..."
     timerText
@@ -503,14 +563,14 @@ function examModeText() {
 }
 
 function examModeGraph() {
-    inputGraph
-    lauchMarionnet
+    launchMarionnet
     timerGraph
     evaluation
 }
 
 installDep
 verification
+[ $graph -eq 1 ] && inputGraph || inputText
 getMarionetFile
 if [ $exam -eq 1 ]; then
     [ $graph -eq 1 ] && examModeGraph || examModeText

@@ -1,6 +1,8 @@
 client/*.mar
 client/*.txt
 client/*.json
+client/marioTestJson/
+client/TPssh
 client/id_rsa_marionnet
 client/examMario
 client/script
