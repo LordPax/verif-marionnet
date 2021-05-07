@@ -53,15 +53,15 @@
     // }
 
     $data = json_decode($input);
-    $source = $data->source; 
+    $idExam= $data->idExam; 
     $mode = $data->examMode;
     $graph = $data->graph;
 
     $logDir='/home/gauthier/verif-marionnet/server/log/';
-    $normalLogFile="$logDir/$source-normal.log";
-    $examLogFile="$logDir/$source-exam.log";
+    $normalLogFile="$logDir/$idExam-normal.log";
+    $examLogFile="$logDir/$idExam-exam.log";
     $logFile = $mode === 1 ? $examLogFile : $normalLogFile;
-    $requestFile='/home/gauthier/public_html/'.$source.'/requetes.json';
+    $requestFile='/home/gauthier/public_html/'.$idExam.'/requetes.json';
     // $requestFile='/srv/http/server/exempleTP1_requetes.json';
 
     $show = '';
@@ -117,9 +117,9 @@
         $show .= ";; Your grade is $note/$totPts => $note20/20; $color";
 
     
-    $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20";
+    $log = " * IP:$ip; Date:$date; Note:$note/$totPts; Note20:$note20/20; idExam:$data->idExam";
     if ($mode == 1)
-        $log .= "; firstName:$data->firstName; name:$data->name; idExam:$data->idExam";
+        $log .= "; firstName:$data->firstName; name:$data->name";
     $log .= "$questionLog\n";
 
 
