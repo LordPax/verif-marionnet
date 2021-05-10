@@ -61,7 +61,7 @@
     $normalLogFile="$logDir/$idExam-normal.log";
     $examLogFile="$logDir/$idExam-exam.log";
     $logFile = $mode === 1 ? $examLogFile : $normalLogFile;
-    $requestFile='/home/gauthier/public_html/'.$idExam.'/requetes.json';
+    $requestFile='/home/gauthier/public_html/'.$idExam.'/bareme.json';
     // $requestFile='/srv/http/server/exempleTP1_requetes.json';
 
     $show = '';
