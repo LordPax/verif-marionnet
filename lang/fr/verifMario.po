@@ -1,0 +1,165 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: verifMario\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 2.2.1\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Language: fr\n"
+
+#: verifMario:36
+msgid ""
+"Usage : $0 [option]\n"
+"\n"
+"Option :\n"
+"--help ................ show help\n"
+"--debug ............... debug mode\n"
+"--text ................ text mode"
+msgstr ""
+"Usage : $0 [option]\n"
+"\n"
+"Option :\n"
+"--help ................ affiche l'aide\n"
+"--debug ............... debug mode\n"
+"--text ................ texte mode"
+
+#: verifMario:71
+msgid "Unknown parameter"
+msgstr "Paramètre inconnue"
+
+#: verifMario:86
+msgid "Usage: $cde  host cmd"
+msgstr "Usage: $cde  host cmd"
+
+#: verifMario:87
+msgid "Where host is the name of a virtual machine in marionnet"
+msgstr "Host est le nom de la machine virtuel"
+
+#: verifMario:97
+msgid "Machine $Host not found in current marionnet project"
+msgstr "Machine $Host introuvable dans le projet marionnet"
+
+#: verifMario:104
+msgid "Tap not found"
+msgstr "Tap non trouvé"
+
+#: verifMario:120
+msgid "\\e[31mERROR :\\e[0m Ssh connection failed with $Host"
+msgstr "\\e[31mERROR :\\e[0m Connexion ssh impossible avec $Host"
+
+#: verifMario:240
+msgid "Enter your first name : "
+msgstr "Entrer votre prénom : "
+
+#: verifMario:243
+msgid "Enter your name : "
+msgstr "Entrer votre nom : "
+
+#: verifMario:247
+msgid "Enter exercise name : "
+msgstr "Entrer le nom de l'éxercice : "
+
+#: verifMario:253
+msgid "Enter your first name"
+msgstr "Entrer votre prénom"
+
+#: verifMario:253
+msgid "Enter your name"
+msgstr "Entrer votre nom"
+
+#: verifMario:253 verifMario:261
+msgid "Enter exercise name"
+msgstr "Entrer le nom de l'éxercice"
+
+#: verifMario:275 verifMario:282
+msgid "All field must be completed"
+msgstr "Tous les champs doivent être completés"
+
+#: verifMario:294
+msgid "Marionnet daemon is already running"
+msgstr "Marionnet deamon est déjà lancé"
+
+#: verifMario:297
+msgid "Marionnet daemon started"
+msgstr "Marionnet daemon lancé"
+
+#: verifMario:306
+msgid "Marionnet started"
+msgstr "Marionnet lancé"
+
+#: verifMario:308
+msgid "Marionnet already running"
+msgstr "Marionnet est déjà lancé"
+
+#: verifMario:311
+msgid "Marionnet project $idExam/$projectName does not exist"
+msgstr "Le projet marionnet $idExam/$projectName n'existe pas"
+
+#: verifMario:327
+msgid "Id $idExam does not exist"
+msgstr "L'id $idExam n'existe pas"
+
+#: verifMario:331
+msgid "$idExam/$f already exist"
+msgstr "$idExam/$f exist déjà"
+
+#: verifMario:338
+msgid "Change chmod right to 600"
+msgstr "Droit chmod changé à 600"
+
+#: verifMario:350
+msgid "Request file does not exist or is empty"
+msgstr "Le fichier de requête n'existe pas ou est vide"
+
+#: verifMario:360
+msgid "$nbLine request found"
+msgstr "$nbLine requêtes trouvé"
+
+#: verifMario:372
+msgid "Project not found"
+msgstr "Projet non trouvé"
+
+#: verifMario:376
+msgid "Parsing cable ..."
+msgstr "Analyse des cables ..."
+
+#: verifMario:413
+msgid "Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
+msgstr "Récupération de $i/$nbLine : ${dataRequest[$i,1]} ..."
+
+#: verifMario:428
+msgid "# Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
+msgstr "# Récupération de $i/$nbLine : ${dataRequest[$i,1]} ..."
+
+#: verifMario:431
+msgid "Getting data"
+msgstr "Récupération des données"
+
+#: verifMario:475
+msgid "Evaluation in progress ..."
+msgstr "Evaluation en cours ..."
+
+#: verifMario:495
+msgid "Would you like to be evaluated (y/n) : "
+msgstr "Voulez-vous vous faire évalué (y/n) : "
+
+#: verifMario:502 verifMario:527
+msgid "Marionnet not launched"
+msgstr "Marionnet n'est pas lancé"
+
+#: verifMario:506 verifMario:531
+msgid "Good bye"
+msgstr "Au revoir"
+
+#: verifMario:518
+msgid "Would you like to be evaluated"
+msgstr "Voulez-vous vous faire évalué"
+
+#: verifMario:559
+msgid "Your are in exam mode, you have $timing seconds ..."
+msgstr "Vous êtes en mode examen, vous avez $timing secondes ..."

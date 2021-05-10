@@ -1,6 +1,8 @@
 #!/bin/bash
 
 # distrib=$(lsb_release -i | cut -d : -f 2)
+# export TEXTDOMAINDIR="/usr/share/locale/"
+export TEXTDOMAIN="verifMario"
 distrib=""
 
 serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
@@ -33,7 +35,7 @@ nbCable=0
 nbLine=0
 
 function helpFunc() {
-    echo "Usage : $0 [option]
+    echo $"Usage : $0 [option]
 
 Option :
 --help ................ show help
@@ -68,7 +70,7 @@ if [ $# -ge 1 ]; then
         elif [ "$1" == "--text" ]; then graph=0
         elif [ "$1" == "--help" ]; then helpFunc
         else
-            echo_err "Paramètre inconnu"
+            echo_err $"Unknown parameter"
             exit 1
         fi
         shift
@@ -83,8 +85,8 @@ function marioSsh() {
     # we need more checks
     #-- Checks
     if [ "A$2" = "A" ]; then
-        echo "Usage: $cde  host cmd" > /dev/stderr
-        echo_err "where host is the name of a virtual machine in marionnet"
+        echo $"Usage: $cde  host cmd" > /dev/stderr
+        echo_err $"Where host is the name of a virtual machine in marionnet"
         exit 1
     fi
 
@@ -94,14 +96,14 @@ function marioSsh() {
 
     resu=`ps aw |grep marionnet|grep "hostname=$Host "|head -1|sed -e 's/^.* eth42=\([^ ]*\) .*$/\1/'`'/'
     if [ "$resu" = "/" ] ; then
-        echo_err "machine $Host non trouvé dans le projet marionnet"
+        echo_err $"Machine $Host not found in current marionnet project"
         exit 1
     fi
 
     local tap=`echo $resu | cut -d ',' -f 2`
 
     if [ "A$tap" = "A" ]; then
-        echo_err "Pas de tap trouvé"
+        echo_err $"Tap not found"
         exit 1
     fi
 
@@ -117,7 +119,7 @@ function marioSsh() {
 
     ssh -xq -i $PRIVATE_RSA_KEY root@$ip $Cmd
     if [ $? -eq 255 ]; then
-        echo_debug "\e[31mERROR :\e[0m Connexion ssh impossible avec $Host" err
+        echo_debug $"\e[31mERROR :\e[0m Ssh connection failed with $Host" err
     fi
 }
 
@@ -237,29 +239,29 @@ function installDep() {
 function inputText() {
     if [ $exam -eq 1 ]; then
         while [ "A$firstName" = "A" ]; do
-            read -p "Enter your first name : " firstName
+            read -p $"Enter your first name : " firstName
         done
         while [ "A$name" = "A" ]; do
-            read -p "Enter your name : " name
+            read -p $"Enter your name : " name
         done
     fi
     while [ "A$idExam" = "A" ]; do
-        read -p "Enter exercise name : " idExam
+        read -p $"Enter exercise name : " idExam
     done
 }
 
 function inputGraph() {
     if [ $exam -eq 1 ]; then
         local output=$(yad --form --title "input" \
-        --field "Enter your first name" \
-        --field "Enter your name" \
-        --field "Enter exercise name" \
+        --field $"Enter your first name" \
+        --field $"Enter your name" \
+        --field $"Enter exercise name" \
         --button=envoyer:0 \
         --button=gtk-cancel:1 \
         --on-top)
     else
         local output=$(yad --form --title "input" \
-        --field "Enter exercise name" \
+        --field $"Enter exercise name" \
         --button=envoyer:0 \
         --button=gtk-cancel:1 \
         --on-top)
@@ -272,14 +274,14 @@ function inputGraph() {
                 name=$(echo $output | cut -d '|' -f 2)
                 idExam=$(echo $output | cut -d '|' -f 3)
             else
-                echo_err "Tout les champs doivent être complété"
+                echo_err $"All field must be completed"
                 inputGraph
             fi
         else
             if echo $output | grep -E ".+\|" &> /dev/null; then
                 idExam=$(echo $output | cut -d '|' -f 1)
             else
-                echo_err "Tout les champs doivent être complété"
+                echo_err $"All field must be completed"
                 inputGraph
             fi
         fi
@@ -289,12 +291,12 @@ function inputGraph() {
 }
 
 function verification() {
-    local res=$(ps aux | grep marionnet | grep daemon.native | wc -l)
+    local res=$(ps aux | grep marionnet | grep '\-daemon' | wc -l)
     if [ $res -eq 1 ]; then
-        echo_debug "Marionnet daemon is already running"
+        echo_debug $"Marionnet daemon is already running"
     else
         sudo /etc/init.d/marionnet-daemon start
-        echo "Marionnet daemon started"
+        echo $"Marionnet daemon started"
     fi
 }
 
@@ -303,12 +305,12 @@ function launchMarionnet() {
         res=$(ps aux | grep marionnet | grep $projectName | wc -l)
         if [ $res -eq 0 ]; then 
             marionnet $idExam/$projectName 2> /dev/null &
-            echo "Marionnet started"
+            echo $"Marionnet started"
         else
-            echo_debug "Marionnet already running"
+            echo_debug $"Marionnet already running"
         fi
     else
-        echo_err "Le projet marionnet $idExam/$projectName n'éxiste pas"
+        echo_err $"Marionnet project $idExam/$projectName does not exist"
         exit 1
     fi
 }
@@ -324,18 +326,18 @@ function getMarionetFile() {
             curl -s $serverUrl/$idExam/$f -o $idExam/$f
             if grep '404 Not Found' $idExam/$f &> /dev/null; then
                 rm -rf $idExam
-                echo_err "L'id $idExam n'existe pas"
+                echo_err $"Id $idExam does not exist"
                 exit 1
             fi
         else
-            echo_debug "$idExam/$f already exist"
+            echo_debug $"$idExam/$f already exist"
         fi
     done
 
     if [ -f $idExam/$idSsh ]; then
         res=$(ls -l $idExam/$idSsh | cut -d ' ' -f 1)
         if [ $res != "-rw-------" ]; then
-            echo_debug "Change chmod to 600"
+            echo_debug $"Change chmod right to 600"
             chmod 600 $idExam/$idSsh
         fi
     fi
@@ -347,7 +349,7 @@ function parseRequest() {
     local l=0
 
     if [ $nbLine -eq 0 ]; then
-        echo_err "Le fichier de requetes est vide ou n'existe pas"
+        echo_err $"Request file does not exist or is empty"
         exit 1
     fi
 
@@ -357,7 +359,7 @@ function parseRequest() {
         dataRequest[$l,2]=$(jq -r ".[$i].command" < $idExam/$requestName)
     done
 
-    [ $graph -eq 0 ] && echo "$nbLine request found"
+    [ $graph -eq 0 ] && echo $"$nbLine request found"
 }
 
 function parseCable() {
@@ -369,11 +371,11 @@ function parseCable() {
     local i=0
 
     if [ "A$pName" = "A" ]; then
-        echo_err "Aucun projet trouvé"
+        echo_err $"Project not found"
         exit 1
     fi
     
-    echo_debug "Parsing cable ..."
+    echo_debug $"Parsing cable ..."
 
     while read line ; do
         if [ "$(echo $line)" == "$patternD" ]; then
@@ -382,12 +384,12 @@ function parseCable() {
             char='cross'
         fi
 
-        line=$(echo $line | grep '^[^:]*:img:c -> [^:]*:img:c')
+        line=$(echo $line | grep '^[^ ]* -> [^:]*:img:c')
         if [ "A$line" != "A" ]; then
             i=$((i + 1))
-            cable[$i]=$(echo $line | sed -e "s/^\([^:]*\):img:c -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \1 \2/")
+            cable[$i]=$(echo $line | sed -e "s/^\([^(:| )]*\)[(:img:c)]* -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \1 \2/")
             i=$((i + 1))
-            cable[$i]=$(echo $line | sed -e "s/^\([^:]*\):img:c -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \2 \1/")
+            cable[$i]=$(echo $line | sed -e "s/^\([^(:| )]*\)[(:img:c)]* -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \2 \1/")
         fi
     done < $TMPDIR/marionnet-*.dir/$pName/tmp/sketch.dot
 
@@ -410,7 +412,7 @@ function formatJson() {
 function getDataText() {
     local show=""
     for i in $(seq 1 $nbLine); do
-        show="Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
+        show=$"Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
         [ $debug -eq 0 ] && echo -en "$show \r" || echo $show
 
         data[$i]=$(${dataRequest[$i,2]}) # execute la commande
@@ -425,10 +427,10 @@ function getDataText() {
 function getDataGraph() {
     local tmp=""
     for i in $(seq 1 $nbLine); do
-        echo "# Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
+        echo $"# Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
         echo $((100 * $i / $nbLine))
         echo $(${dataRequest[$i,2]}) >> $LOGFILE
-    done | yad --progress --percentage=0 --auto-close --on-top --title "Getting data"
+    done | yad --progress --percentage=0 --auto-close --on-top --title $"Getting data"
 
     local i=1
     while read line ; do
@@ -472,7 +474,7 @@ function sendGraph() {
 }
 
 function evaluation() {
-    [ $graph -eq 0 ] && echo "Evaluation in progress ..."
+    [ $graph -eq 0 ] && echo $"Evaluation in progress ..."
 
     parseRequest
     parseCable
@@ -492,18 +494,18 @@ function normalModeText() {
     while [ "$choice" != "n" ]; do
         choice=""
         while [ "A$choice" = "A" ] || [ "$choice" != "y" ] && [ "$choice" != "n" ]; do
-            read -p "Would you like to be evaluated (y/n) : " choice
+            read -p $"Would you like to be evaluated (y/n) : " choice
         done
         if [ "$choice" = "y" ]; then
             res=$(ps aux | grep marionnet | grep $projectName | wc -l)
             if [ $res -eq 1 ]; then 
                 evaluation
             else 
-                echo_err "Marionnet n'est pas lancé"
+                echo_err $"Marionnet not launched"
                 exit 1
             fi
         else
-            echo "Good bye"
+            echo $"Good bye"
         fi
     done
 }
@@ -515,7 +517,7 @@ function normalModeGraph() {
     --title Evaluation \
     --button=gtk-yes:0 \
     --button=gtk-no:1 \
-    --text "Would you like to be evaluated" \
+    --text $"Would you like to be evaluated" \
     --on-top
 
     back=$?
@@ -524,11 +526,11 @@ function normalModeGraph() {
         if [ $res -eq 1 ]; then 
             evaluation
         else 
-            echo_err "Marionnet n'est pas lancé"
+            echo_err $"Marionnet not launched"
             exit 1
         fi
     done
-    echo "Good bye"
+    echo $"Good bye"
 }
 
 function timerGraph() {
@@ -556,7 +558,7 @@ function timerText() {
 function examModeText() {
     launchMarionnet
 
-    echo "Your are in exam mode, you have $timing seconds ..."
+    echo $"Your are in exam mode, you have $timing seconds ..."
     timerText
 
     evaluation
