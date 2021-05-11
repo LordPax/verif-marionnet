@@ -56,17 +56,24 @@
     $idExam= $data->idExam; 
     $mode = $data->examMode;
     $graph = $data->graph;
+    
+    $ip=$_SERVER['REMOTE_ADDR'];
 
     $logDir='/home/gauthier/verif-marionnet/server/log/';
-    $normalLogFile="$logDir/$idExam-normal.log";
-    $examLogFile="$logDir/$idExam-exam.log";
+    $normalLogFile="$logDir/$idExam/normal/$ip.log";
+    $examLogFile="$logDir/$idExam/exam/$ip.log";
     $logFile = $mode === 1 ? $examLogFile : $normalLogFile;
     $requestFile='/home/gauthier/public_html/'.$idExam.'/bareme.json';
     // $requestFile='/srv/http/server/exempleTP1_requetes.json';
 
+    if (!file_exists("$logDir/$idExam")) {
+        mkdir("$logDir/$idExam/"); 
+        mkdir("$logDir/$idExam/normal/");
+        mkdir("$logDir/$idExam/exam/");
+    }
+
     $show = '';
     $log = '';
-    $ip=$_SERVER['REMOTE_ADDR'];
     $date=date('d/m/Y H:i:s');
 
     $file = file_get_contents($requestFile);
@@ -79,22 +86,33 @@
     $comment = "";
     $color="";
     $questionLog = "";
+    $tolerance = 0; // nombre d'erreur accepté
+    $nbErr = 0;
     
     foreach ($data->data as $k => $v) { 
-        $bareme = !empty($content[$k]->bareme) ? $content[$k]->bareme : 1;
+        $bareme = $content[$k]->bareme !== 0 ? $content[$k]->bareme : $content[$k]->responses[0]->pts;
 
-        for ($i = 0; $valid === 0 && $i < count($content[$k]->responses); $i++) {
-            $valid = validResponse($content[$k]->responses[$i], $v);
-            $color = chooseColor($content[$k]->responses[$i]->pts, $bareme, 0, $graph);
+        if ($nbErr <= $tolerance) {
+            for ($i = 0; $valid === 0 && $i < count($content[$k]->responses); $i++) {
+                $valid = validResponse($content[$k]->responses[$i], $v);
+                $color = chooseColor($content[$k]->responses[$i]->pts, $bareme, 0, $graph);
             
-            if ($valid === 1) {
-                $pts = $content[$k]->responses[$i]->pts;
-                $comment = $content[$k]->responses[$i]->comment;
+                if ($valid === 1) {
+                    $pts = $content[$k]->responses[$i]->pts;
+                    $comment = $content[$k]->responses[$i]->comment;
+                }
             }
         }
+        else {
+            $pts = 0;
+            $comment = "Niveau de tolérance aux erreurs dépassées (tolérance : $tolerance)";
+        }
+
 
         $totPts += $bareme;
         $note += $pts;
+
+	if ($pts === 0) $nbErr++;
 
         $questionLog .= "; ".$content[$k]->label.":$pts/$bareme";
  
