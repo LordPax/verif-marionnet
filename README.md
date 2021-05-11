@@ -2,7 +2,7 @@
 ## Idée
 examen de TP/évalutation automatique TPS marionnet.
 
-## Format du fichier de requetes
+## Format du fichier bareme.json
 ```json
 [
     {
@@ -47,6 +47,34 @@ examen de TP/évalutation automatique TPS marionnet.
             {"default" : "", "comment" : "il manque un cable", "pts" : 0}
         ],
         "bareme" : 1
+    }
+]
+```
+
+## Format du fichier requete.json
+Le fichier requête json conserve juste le label et la command de bareme.json et sert juste à être utilisé par le client
+```json
+[
+    {
+        "label" : "nom du test",
+        "command" : "commande à executer",
+    }
+]
+```
+* exemple
+```json
+[
+    {
+        "label" : "ip m2 eth0",
+        "command" : "getIPAddress m2"
+    },
+    {
+        "label" : "mask m2 eth0",
+        "command" : "getMask m2"
+    },
+    {
+        "label" : "cable S1aM1",
+        "command" : "getCable S1 m1"
     }
 ]
 ```
