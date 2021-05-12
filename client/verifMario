@@ -29,7 +29,7 @@ back=0
 
 declare -A dataRequest
 declare data
-declare cable
+declare -A cable
 
 nbCable=0
 nbLine=0
@@ -185,17 +185,7 @@ function pingMachine() {
 # getCable <machine1> <machine2>
 function getCable() {
     if [ "A$1" != "A" ] && [ "A$2" != "A" ]; then
-        local cbl=""
-        local res=""
-
-        for i in $(seq 1 $nbCable); do
-            res=$(echo ${cable[$i]} | grep "$1 $2")
-            if [ "A$res" != "A" ]; then
-                cbl=$res
-            fi
-        done
-
-        echo $cbl
+        echo ${cable[$1,$2]}
     fi
 }
 
@@ -368,6 +358,8 @@ function parseCable() {
     local patternD='DIRECT CABLE EDGES'
     local patternC='CROSSOVER/SERIAL CABLE EDGES'
     local char=""
+    local m1=""
+    local m2=""
     local i=0
 
     if [ "A$pName" = "A" ]; then
@@ -386,10 +378,11 @@ function parseCable() {
 
         line=$(echo $line | grep ' -> ')
         if [ "A$line" != "A" ]; then
-            i=$((i + 1))
-            cable[$i]=$(echo $line | sed -e "s/^\([^(:| )]*\)[(:img:c)]* -> \([^(:| )]*\)[(:img:c)]* .*\">\([^<]*\).*$/$char \3 \1 \2/")
-            i=$((i + 1))
-            cable[$i]=$(echo $line | sed -e "s/^\([^(:| )]*\)[(:img:c)]* -> \([^(:| )]*\)[(:img:c)]* .*\">\([^<]*\).*$/$char \3 \2 \1/")
+            line=$(echo $line | sed -e "s/^\([^(:| )]*\)[(:img:c)]* -> \([^(:| )]*\)[(:img:c)]* .*$/ \1 \2/")
+            m1=$(echo $line | cut -d ' ' -f1)
+            m2=$(echo $line | cut -d ' ' -f2)
+            cable[$m1,$m2]=$char
+            cable[$m2,$m1]=$char
         fi
     done < $TMPDIR/marionnet-*.dir/$pName/tmp/sketch.dot
 
