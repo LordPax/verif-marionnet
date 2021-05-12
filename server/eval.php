@@ -53,6 +53,10 @@
     // }
 
     $data = json_decode($input);
+
+    // echo $input;
+    // var_dump($data);
+
     $idExam= $data->idExam; 
     $mode = $data->examMode;
     $graph = $data->graph;
