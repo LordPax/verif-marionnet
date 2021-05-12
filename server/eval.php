@@ -23,6 +23,18 @@
         return $col;
     }
 
+
+    function chooseColorWithType(string $ctype, $code = 0) : string {
+        $col = "";
+
+        if ($ctype === "good") $col = $code === 0 ? "\e[32m" : "green";
+        else if ($ctype === "wrong") $col = $code === 0 ? "\e[31;1m" : "red";
+        else if ($ctype === "partial") $col = $code == 0 ? "\e[93;1m" : "orange";
+	else $col = $code == 0 ? "\e[34m" : "blue"; 
+
+        return $col;
+    }
+
     /**
      * fonction qui vérifie la validité d'une réponse à condition qu'un de ces mot-clé exist (regex, equal, default)
      * 
@@ -53,7 +65,11 @@
     // }
 
     $data = json_decode($input);
-    $idExam= $data->idExam; 
+
+    // echo $input;
+    // var_dump($data);
+
+    $idExam= $data->idExam;
     $mode = $data->examMode;
     $graph = $data->graph;
     
@@ -67,7 +83,7 @@
     // $requestFile='/srv/http/server/exempleTP1_requetes.json';
 
     if (!file_exists("$logDir/$idExam")) {
-        mkdir("$logDir/$idExam/"); 
+        mkdir("$logDir/$idExam/");
         mkdir("$logDir/$idExam/normal/");
         mkdir("$logDir/$idExam/exam/");
     }
@@ -86,8 +102,9 @@
     $comment = "";
     $color="";
     $questionLog = "";
-    $tolerance = 0; // nombre d'erreur accepté
+    $tolerance = 1; // nombre d'erreur accepté
     $nbErr = 0;
+    $type = "";
     
     foreach ($data->data as $k => $v) { 
         $bareme = $content[$k]->bareme !== 0 ? $content[$k]->bareme : $content[$k]->responses[0]->pts;
@@ -95,24 +112,31 @@
         if ($nbErr <= $tolerance) {
             for ($i = 0; $valid === 0 && $i < count($content[$k]->responses); $i++) {
                 $valid = validResponse($content[$k]->responses[$i], $v);
-                $color = chooseColor($content[$k]->responses[$i]->pts, $bareme, 0, $graph);
-            
+                #$color = chooseColor($content[$k]->responses[$i]->pts, $bareme, 0, $graph); 
+                $color = chooseColorWithType($content[$k]->responses[$i]->type, $graph);
                 if ($valid === 1) {
                     $pts = $content[$k]->responses[$i]->pts;
                     $comment = $content[$k]->responses[$i]->comment;
+                    $type = $content[$k]->responses[$i]->type;
                 }
             }
         }
         else {
             $pts = 0;
             $comment = "Niveau de tolérance aux erreurs dépassées (tolérance : $tolerance)";
+            $type = $content[$i]->responses[0]->type;
+            if (type === "info") 
+                $color = $graph === 0 ? "\e[34m" : "blue";
+            else
+                $color = $graph === 0 ? "\e[31;1m" : "red";
         }
 
+        if ($type !== "info") { // les pts ne sont pas compté
+            $totPts += $bareme;
+            $note += $pts;
+        }
 
-        $totPts += $bareme;
-        $note += $pts;
-
-	if ($pts === 0) $nbErr++;
+        if ($pts === 0) $nbErr++;
 
         $questionLog .= "; ".$content[$k]->label.":$pts/$bareme";
  
@@ -124,6 +148,7 @@
         $pts = 0;
         $comment = "";
         $valid = 0;
+        $type = "";
     }
 
     $note20 = round(20 * $note / $totPts, 2);

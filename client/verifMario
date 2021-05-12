@@ -16,7 +16,7 @@ requestName="requetes.json"
 idSsh="id_rsa_marionnet"
 file="$projectName $requestName $idSsh"
 prefixDir="exo"
-timing=1200 # temps en seconde
+timing=600 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
 LOGFILE=$(mktemp -u)
 touch $LOGFILE
