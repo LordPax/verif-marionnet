@@ -16,7 +16,7 @@ requestName="requetes.json"
 idSsh="id_rsa_marionnet"
 file="$projectName $requestName $idSsh"
 prefixDir="exo"
-timing=1200 # temps en seconde
+timing=600 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
 LOGFILE=$(mktemp -u)
 touch $LOGFILE
@@ -384,12 +384,12 @@ function parseCable() {
             char='cross'
         fi
 
-        line=$(echo $line | grep ' -> ')
+        line=$(echo $line | grep '^[^ ]* -> [^:]*:img:c')
         if [ "A$line" != "A" ]; then
             i=$((i + 1))
-            cable[$i]=$(echo $line | sed -e "s/^\([^(:| )]*\)[(:img:c)]* -> \([^(:| )]*\)[(:img:c)]* .*\">\([^<]*\).*$/$char \3 \1 \2/")
+            cable[$i]=$(echo $line | sed -e "s/^\([^(:| )]*\)[(:img:c)]* -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \1 \2/")
             i=$((i + 1))
-            cable[$i]=$(echo $line | sed -e "s/^\([^(:| )]*\)[(:img:c)]* -> \([^(:| )]*\)[(:img:c)]* .*\">\([^<]*\).*$/$char \3 \2 \1/")
+            cable[$i]=$(echo $line | sed -e "s/^\([^(:| )]*\)[(:img:c)]* -> \([^:]*\):img:c .*\">\([^<]*\).*$/$char \3 \2 \1/")
         fi
     done < $TMPDIR/marionnet-*.dir/$pName/tmp/sketch.dot
 
