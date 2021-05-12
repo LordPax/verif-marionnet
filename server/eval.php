@@ -86,7 +86,7 @@
     $comment = "";
     $color="";
     $questionLog = "";
-    $tolerance = 1; // nombre d'erreur accepté
+    $tolerance = 0; // nombre d'erreur accepté
     $nbErr = 0;
     
     foreach ($data->data as $k => $v) { 
