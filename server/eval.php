@@ -92,8 +92,10 @@
     $log = '';
     $date=date('d/m/Y H:i:s');
 
-    $file = file_get_contents($requestFile);
-    $content = json_decode($file);
+    $bareme = json_decode(file_get_contents($requestFile));
+    
+    $content = $bareme->requests;
+    $tolerance = !empty($bareme->tolerance) ? $bareme->tolerance : 0; // nombre d'erreur accepté
 
     $totPts = 0;
     $note = 0;
@@ -102,7 +104,6 @@
     $comment = "";
     $color="";
     $questionLog = "";
-    $tolerance = 1; // nombre d'erreur accepté
     $nbErr = 0;
     $type = "";
     
