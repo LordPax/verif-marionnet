@@ -16,7 +16,7 @@ requestName="requetes.json"
 idSsh="id_rsa_marionnet"
 file="$projectName $requestName $idSsh"
 prefixDir="exo"
-timing=600 # temps en seconde
+timing=1200 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
 LOGFILE=$(mktemp -u)
 touch $LOGFILE
@@ -248,13 +248,15 @@ function inputGraph() {
         --field $"Enter exercise name" \
         --button=envoyer:0 \
         --button=gtk-cancel:1 \
-        --on-top)
+        --on-top \
+        --mouse)
     else
         local output=$(yad --form --title "input" \
         --field $"Enter exercise name" \
         --button=envoyer:0 \
         --button=gtk-cancel:1 \
-        --on-top)
+        --on-top \
+        --mouse)
     fi
     
     if [ "A$output" != "A" ]; then
@@ -285,7 +287,12 @@ function verification() {
     if [ $res -eq 1 ]; then
         echo_debug $"Marionnet daemon is already running"
     else
-        sudo /etc/init.d/marionnet-daemon start
+        # sudo /etc/init.d/marionnet-daemon start
+        if ! sudo service marionnet-daemon start; then
+            echo_err $"Something wrong with marionnet daemon"
+            exit 1
+        fi
+
         echo $"Marionnet daemon started"
     fi
 }
@@ -295,6 +302,10 @@ function launchMarionnet() {
         res=$(ps aux | grep marionnet | grep $projectName | wc -l)
         if [ $res -eq 0 ]; then 
             marionnet $idExam/$projectName 2> /dev/null &
+            # if ! marionnet $idExam/$projectName 2> /dev/null &; then
+            #     echo_err $"Something wrong with marionnet daemon"
+            #     exit 1
+            # fi
             echo $"Marionnet started"
         else
             echo_debug $"Marionnet already running"
@@ -386,7 +397,7 @@ function parseCable() {
         fi
     done < $TMPDIR/marionnet-*.dir/$pName/tmp/sketch.dot
 
-    nbCable=$i
+    # nbCable=$i
 }
 
 function formatJson() {
@@ -423,7 +434,7 @@ function getDataGraph() {
         echo $"# Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
         echo $((100 * $i / $nbLine))
         echo $(${dataRequest[$i,2]}) >> $LOGFILE
-    done | yad --progress --percentage=0 --auto-close --on-top --title $"Getting data"
+    done | yad --progress --percentage=0 --auto-close --on-top --title $"Getting data" --mouse
 
     local i=1
     while read line ; do
@@ -446,7 +457,8 @@ function sendGraph() {
         --column CheckID:TXT \
         --column Note:TXT \
         --column Message:TXT \
-        --column @back@
+        --column @back@ \
+        --mouse
     else
         curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST | awk -F ';' "$PARSER" |\
         yad --window-icon="gtk-execute" \
@@ -460,7 +472,8 @@ function sendGraph() {
         --column CheckID:TXT \
         --column Note:TXT \
         --column Message:TXT \
-        --column @back@
+        --column @back@ \
+        --mouse
     fi
 
     back=$?
@@ -511,7 +524,8 @@ function normalModeGraph() {
     --button=gtk-yes:0 \
     --button=gtk-no:1 \
     --text $"Would you like to be evaluated" \
-    --on-top
+    --on-top \
+    --mouse
 
     back=$?
     while [ $back -eq 0 ]; do
@@ -536,7 +550,8 @@ function timerGraph() {
     done | yad --progress --percentage=0 \
     --auto-close \
     --title Timer \
-    --button "évaluer sans attendre:0"
+    --button "évaluer sans attendre:0" \
+    --mouse
 }
 
 function timerText() {

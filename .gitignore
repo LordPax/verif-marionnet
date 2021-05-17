@@ -3,6 +3,7 @@ client/*.txt
 client/*.json
 client/marioTestJson/
 client/TPssh
+client/TPS2_exo5
 client/id_rsa_marionnet
 client/examMario
 client/script

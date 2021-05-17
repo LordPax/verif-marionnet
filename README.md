@@ -8,51 +8,57 @@ examen de TP/évalutation automatique TPS marionnet.
 * partial : est affiché en orange
 * wrong : est affiché en rouge
 ```json
-[
-    {
-        "label" : "nom du test",
-        "command" : "commande à executer",
-        "responses" : [
-            {"regex" : "regex reponse attendu", "comment" : "message à afficher si la réponse est bonne","pts" : 2, "type" : "good"},
-            {"equal" : "reponse attendu", "comment" : "message à afficher si la réponse est bonne","pts" : 1, "type" : "partial"},
-            {"default" : "", "comment" : "message par défaut si aucune n'est validé","pts" : 0, "type" : "wrong"}
-        ],
-        "bareme" : 2
-    }
-]
+{
+    "tolerance" : 0,
+    "requests" : [
+        {
+            "label" : "nom du test",
+            "command" : "commande à executer",
+            "responses" : [
+                {"regex" : "regex reponse attendu", "comment" : "message à afficher si la réponse est bonne","pts" : 2, "type" : "good"},
+                {"equal" : "reponse attendu", "comment" : "message à afficher si la réponse est bonne","pts" : 1, "type" : "partial"},
+                {"default" : "", "comment" : "message par défaut si aucune n'est validé","pts" : 0, "type" : "wrong"}
+            ],
+            "bareme" : 2
+        }
+    ]
+}
 ```
 * exemple
 ```json
-[
-    {
-        "label" : "ip m2 eth0",
-        "command" : "getIPAddress m2",
-        "responses" : [
-            {"regex" : "11\\.0\\.1\\..*", "comment" : "oui très bien","pts" : 1, "type" : "info"},
-            {"default" : "", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0, "type" : "info"}
-        ],
-        "bareme" : 1
-    },
-    {
-        "label" : "mask m2 eth0",
-        "command" : "getMask m2",
-        "responses" : [
-            {"equal" : "255.255.255.0", "comment" : "oui très bien", "pts" : 1 , "type" : "good"},
-            {"default" : "", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0, "type" : "wrong"}
-        ],
-        "bareme" : 1
-    },
-    {
-        "label" : "cable S1aM1",
-        "command" : "getCable S1 m1",
-        "responses" : [
-            {"regex" : "direct .* S1 m1", "comment" : "oui très bien", "pts" : 1, "type" : "good"},
-            {"regex" : "cross .* S1 m1", "comment" : "il y a un cable mais il n'est pas du bon type", "pts" : 0.5, "type" : "partial"},
-            {"default" : "", "comment" : "il manque un cable", "pts" : 0, "type" : "wrong"}
-        ],
-        "bareme" : 1
-    }
-]
+{
+    "tolerance" : 0,
+    "requests" : [
+        {
+            "label" : "ip m2 eth0",
+            "command" : "getIPAddress m2",
+            "responses" : [
+                {"regex" : "11\\.0\\.1\\..*", "comment" : "oui très bien","pts" : 1, "type" : "info"},
+                {"default" : "", "comment" : "l'ip n'est pas bon, regarde avec ifconfig","pts" : 0, "type" : "info"}
+            ],
+            "bareme" : 1
+        },
+        {
+            "label" : "mask m2 eth0",
+            "command" : "getMask m2",
+            "responses" : [
+                {"equal" : "255.255.255.0", "comment" : "oui très bien", "pts" : 1 , "type" : "good"},
+                {"default" : "", "comment" : "le mask n'est pas bon, regarde avec ifconfig", "pts" : 0, "type" : "wrong"}
+            ],
+            "bareme" : 1
+        },
+        {
+            "label" : "cable S1aM1",
+            "command" : "getCable S1 m1",
+            "responses" : [
+                {"regex" : "direct", "comment" : "oui très bien", "pts" : 1, "type" : "good"},
+                {"regex" : "cross", "comment" : "il y a un cable mais il n'est pas du bon type", "pts" : 0.5, "type" : "partial"},
+                {"default" : "", "comment" : "il manque un cable", "pts" : 0, "type" : "wrong"}
+            ],
+            "bareme" : 1
+        }
+    ]
+}
 ```
 
 ## Format du fichier requete.json
@@ -171,7 +177,7 @@ pingMachine <machine1> <machine2> [interface]
 pingMachine m1 m2
 ```
 ### getCable
-Affiche le cable et le type (cross ou direct) de cable entre 2 équipements
+Affiche le type (cross ou direct) de cable entre 2 équipements
 * syntax
 ```bash
 getCable <machine1> <machine2>
@@ -182,7 +188,7 @@ getCable R1 S1
 ```
 * format de l'affichage
 ```
-direct d1 R1 S1
+direct
 ```
 ### checkIP
 Vérifie l'ip d'une machine en fonction du mask (affiche "ok" si il y parvient) (par défaut : interface=eth0)
