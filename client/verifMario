@@ -20,6 +20,7 @@ timing=1200 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
 LOGFILE=$(mktemp -u)
 touch $LOGFILE
+response=""
 
 name=""
 firstName=""
@@ -30,6 +31,7 @@ back=0
 declare -A dataRequest
 declare data
 declare -A cable
+declare -A dataResponse
 
 nbCable=0
 nbLine=0
@@ -405,7 +407,7 @@ function formatJson() {
     for i in $(seq 1 $(( nbLine-1 ))); do
         send="$send\"${data[$i]}\","
     done
-    send="$send\"${data[$nbLine]}\"], \"examMode\":$exam, \"graph\":$graph, \"idExam\":\"$idExam\""
+    send="$send\"${data[$nbLine]}\"], \"examMode\":$exam, \"idExam\":\"$idExam\""
     if [ $exam -eq 1 ]; then
         send="$send, \"firstName\":\"$firstName\", \"name\":\"$name\"}"
     else
@@ -444,9 +446,65 @@ function getDataGraph() {
     echo -n "" > $LOGFILE
 }
 
-function sendGraph() {
+function parseResponse() {
+    local resp=$(echo $response | jq .responses)
+    local line=""
+    for i in $(seq 0 $((nbLine - 1))); do
+        l=$((i + 1))
+        line=$(echo $resp | jq ".[$i]")
+        dataResponse[$l,1]=$(echo $line | jq -r ".label") 
+        dataResponse[$l,2]=$(echo $line | jq -r ".pts") 
+        dataResponse[$l,3]=$(echo $line | jq -r ".comment") 
+        dataResponse[$l,4]=$(echo $line | jq -r ".type") 
+    done
+    comment=$(echo $response | jq -r .grade.comment)
+    type=$(echo $response | jq -r .grade.type)
+}
+
+# chooseColorWithType <type>
+function chooseColorWithType() {
+    if [ "A$1" != "A" ]; then
+        local col=""
+        
+        if [ "$1" = "good" ]; then
+            col=$([ $graph -eq 0 ] && echo "\e[32m" || echo "green")
+        elif [ "$1" = "wrong" ]; then
+            col=$([ $graph -eq 0 ] && echo "\e[31;1m" || echo "red")
+        elif [ "$1" = "partial" ]; then
+            col=$([ $graph -eq 0 ] && echo "\e[93;1m" || echo "orange")
+        else
+            col=$([ $graph -eq 0 ] && echo "\e[34m" || echo "blue")
+        fi
+
+        echo $col
+    fi
+}
+
+function formatViewText() {
+    view=""
+    local color=""
+    for i in $(seq 1 $nbLine); do
+        color=$(chooseColorWithType ${dataResponse[$i,4]})
+        view="${view}${dataResponse[$i,1]} \t ${color}${dataResponse[$i,2]} \t ${dataResponse[$i,3]}\e[0m\n"
+    done
+    color=$(chooseColorWithType $type)
+    view="${view}${color}${comment}\e[0m"
+}
+
+function formatViewGraph() {
+    view=""
+    local color=""
+    for i in $(seq 1 $nbLine); do
+        color=$(chooseColorWithType ${dataResponse[$i,4]})
+        view="${view}${dataResponse[$i,1]}; ${dataResponse[$i,2]}; ${dataResponse[$i,3]}; $color\n"
+    done
+    color=$(chooseColorWithType $type)
+    view="${view};; ${comment}; ${color}"
+}
+
+function showViewGraph() {
     if [ $exam -eq 1 ]; then
-        curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST | awk -F ';' "$PARSER" |\
+        echo -e $view | awk -F ';' "$PARSER" |\
         yad --window-icon="gtk-execute" \
         --title="Vérif Marionnet exam"  \
         --button=gtk-close:1 \
@@ -460,7 +518,7 @@ function sendGraph() {
         --column @back@ \
         --mouse
     else
-        curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST | awk -F ';' "$PARSER" |\
+        echo -e $view | awk -F ';' "$PARSER" |\
         yad --window-icon="gtk-execute" \
         --title="Vérif Marionnet"  \
         --button=revérifier:0 \
@@ -487,10 +545,15 @@ function evaluation() {
     [ $graph -eq 1 ] && getDataGraph || getDataText
     formatJson
 
-    if [ $graph -eq 1 ]; then
-        sendGraph
+    response=$(curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST)
+
+    parseResponse
+    [ $graph -eq 1 ] && formatViewGraph || formatViewText
+
+    if [ $graph -eq 0 ]; then
+        echo -e $view
     else
-        curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
+        showViewGraph
     fi
 }
 
