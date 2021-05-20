@@ -16,10 +16,11 @@ requestName="requetes.json"
 idSsh="id_rsa_marionnet"
 file="$projectName $requestName $idSsh"
 prefixDir="exo"
-timing=600 # temps en seconde
+timing=1200 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
 LOGFILE=$(mktemp -u)
 touch $LOGFILE
+response=""
 
 name=""
 firstName=""
@@ -30,6 +31,7 @@ back=0
 declare -A dataRequest
 declare data
 declare -A cable
+declare -A dataResponse
 
 nbCable=0
 nbLine=0
@@ -248,13 +250,15 @@ function inputGraph() {
         --field $"Enter exercise name" \
         --button=envoyer:0 \
         --button=gtk-cancel:1 \
-        --on-top)
+        --on-top \
+        --mouse)
     else
         local output=$(yad --form --title "input" \
         --field $"Enter exercise name" \
         --button=envoyer:0 \
         --button=gtk-cancel:1 \
-        --on-top)
+        --on-top \
+        --mouse)
     fi
     
     if [ "A$output" != "A" ]; then
@@ -285,7 +289,12 @@ function verification() {
     if [ $res -eq 1 ]; then
         echo_debug $"Marionnet daemon is already running"
     else
-        sudo /etc/init.d/marionnet-daemon start
+        # sudo /etc/init.d/marionnet-daemon start
+        if ! sudo service marionnet-daemon start; then
+            echo_err $"Something wrong with marionnet daemon"
+            exit 1
+        fi
+
         echo $"Marionnet daemon started"
     fi
 }
@@ -295,6 +304,10 @@ function launchMarionnet() {
         res=$(ps aux | grep marionnet | grep $projectName | wc -l)
         if [ $res -eq 0 ]; then 
             marionnet $idExam/$projectName 2> /dev/null &
+            # if ! marionnet $idExam/$projectName 2> /dev/null &; then
+            #     echo_err $"Something wrong with marionnet daemon"
+            #     exit 1
+            # fi
             echo $"Marionnet started"
         else
             echo_debug $"Marionnet already running"
@@ -386,7 +399,7 @@ function parseCable() {
         fi
     done < $TMPDIR/marionnet-*.dir/$pName/tmp/sketch.dot
 
-    nbCable=$i
+    # nbCable=$i
 }
 
 function formatJson() {
@@ -394,7 +407,7 @@ function formatJson() {
     for i in $(seq 1 $(( nbLine-1 ))); do
         send="$send\"${data[$i]}\","
     done
-    send="$send\"${data[$nbLine]}\"], \"examMode\":$exam, \"graph\":$graph, \"idExam\":\"$idExam\""
+    send="$send\"${data[$nbLine]}\"], \"examMode\":$exam, \"idExam\":\"$idExam\""
     if [ $exam -eq 1 ]; then
         send="$send, \"firstName\":\"$firstName\", \"name\":\"$name\"}"
     else
@@ -423,7 +436,7 @@ function getDataGraph() {
         echo $"# Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
         echo $((100 * $i / $nbLine))
         echo $(${dataRequest[$i,2]}) >> $LOGFILE
-    done | yad --progress --percentage=0 --auto-close --on-top --title $"Getting data"
+    done | yad --progress --percentage=0 --auto-close --on-top --title $"Getting data" --mouse
 
     local i=1
     while read line ; do
@@ -433,9 +446,65 @@ function getDataGraph() {
     echo -n "" > $LOGFILE
 }
 
-function sendGraph() {
+function parseResponse() {
+    local resp=$(echo $response | jq .responses)
+    local line=""
+    for i in $(seq 0 $((nbLine - 1))); do
+        l=$((i + 1))
+        line=$(echo $resp | jq ".[$i]")
+        dataResponse[$l,1]=$(echo $line | jq -r ".label") 
+        dataResponse[$l,2]=$(echo $line | jq -r ".pts") 
+        dataResponse[$l,3]=$(echo $line | jq -r ".comment") 
+        dataResponse[$l,4]=$(echo $line | jq -r ".type") 
+    done
+    comment=$(echo $response | jq -r .grade.comment)
+    type=$(echo $response | jq -r .grade.type)
+}
+
+# chooseColorWithType <type>
+function chooseColorWithType() {
+    if [ "A$1" != "A" ]; then
+        local col=""
+        
+        if [ "$1" = "good" ]; then
+            col=$([ $graph -eq 0 ] && echo "\e[32m" || echo "green")
+        elif [ "$1" = "wrong" ]; then
+            col=$([ $graph -eq 0 ] && echo "\e[31;1m" || echo "red")
+        elif [ "$1" = "partial" ]; then
+            col=$([ $graph -eq 0 ] && echo "\e[93;1m" || echo "orange")
+        else
+            col=$([ $graph -eq 0 ] && echo "\e[34m" || echo "blue")
+        fi
+
+        echo $col
+    fi
+}
+
+function formatViewText() {
+    view=""
+    local color=""
+    for i in $(seq 1 $nbLine); do
+        color=$(chooseColorWithType ${dataResponse[$i,4]})
+        view="${view}${dataResponse[$i,1]} \t ${color}${dataResponse[$i,2]} \t ${dataResponse[$i,3]}\e[0m\n"
+    done
+    color=$(chooseColorWithType $type)
+    view="${view}${color}${comment}\e[0m"
+}
+
+function formatViewGraph() {
+    view=""
+    local color=""
+    for i in $(seq 1 $nbLine); do
+        color=$(chooseColorWithType ${dataResponse[$i,4]})
+        view="${view}${dataResponse[$i,1]}; ${dataResponse[$i,2]}; ${dataResponse[$i,3]}; $color\n"
+    done
+    color=$(chooseColorWithType $type)
+    view="${view};; ${comment}; ${color}"
+}
+
+function showViewGraph() {
     if [ $exam -eq 1 ]; then
-        curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST | awk -F ';' "$PARSER" |\
+        echo -e $view | awk -F ';' "$PARSER" |\
         yad --window-icon="gtk-execute" \
         --title="Vérif Marionnet exam"  \
         --button=gtk-close:1 \
@@ -446,9 +515,10 @@ function sendGraph() {
         --column CheckID:TXT \
         --column Note:TXT \
         --column Message:TXT \
-        --column @back@
+        --column @back@ \
+        --mouse
     else
-        curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST | awk -F ';' "$PARSER" |\
+        echo -e $view | awk -F ';' "$PARSER" |\
         yad --window-icon="gtk-execute" \
         --title="Vérif Marionnet"  \
         --button=revérifier:0 \
@@ -460,7 +530,8 @@ function sendGraph() {
         --column CheckID:TXT \
         --column Note:TXT \
         --column Message:TXT \
-        --column @back@
+        --column @back@ \
+        --mouse
     fi
 
     back=$?
@@ -474,10 +545,15 @@ function evaluation() {
     [ $graph -eq 1 ] && getDataGraph || getDataText
     formatJson
 
-    if [ $graph -eq 1 ]; then
-        sendGraph
+    response=$(curl -s -H "Content-Type: application/json" -X POST -d "$send" $serverPOST)
+
+    parseResponse
+    [ $graph -eq 1 ] && formatViewGraph || formatViewText
+
+    if [ $graph -eq 0 ]; then
+        echo -e $view
     else
-        curl -H "Content-Type: application/json" -X POST -d "$send" $serverPOST
+        showViewGraph
     fi
 }
 
@@ -511,7 +587,8 @@ function normalModeGraph() {
     --button=gtk-yes:0 \
     --button=gtk-no:1 \
     --text $"Would you like to be evaluated" \
-    --on-top
+    --on-top \
+    --mouse
 
     back=$?
     while [ $back -eq 0 ]; do
@@ -536,7 +613,8 @@ function timerGraph() {
     done | yad --progress --percentage=0 \
     --auto-close \
     --title Timer \
-    --button "évaluer sans attendre:0"
+    --button "évaluer sans attendre:0" \
+    --mouse
 }
 
 function timerText() {
