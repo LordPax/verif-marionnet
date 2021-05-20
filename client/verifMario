@@ -304,10 +304,6 @@ function launchMarionnet() {
         res=$(ps aux | grep marionnet | grep $projectName | wc -l)
         if [ $res -eq 0 ]; then 
             marionnet $idExam/$projectName 2> /dev/null &
-            # if ! marionnet $idExam/$projectName 2> /dev/null &; then
-            #     echo_err $"Something wrong with marionnet daemon"
-            #     exit 1
-            # fi
             echo $"Marionnet started"
         else
             echo_debug $"Marionnet already running"
@@ -449,6 +445,12 @@ function getDataGraph() {
 function parseResponse() {
     local resp=$(echo $response | jq .responses)
     local line=""
+
+    if [ "A$resp" = "A" ]; then
+        echo_err $"We have not response"
+        exit 1
+    fi
+
     for i in $(seq 0 $((nbLine - 1))); do
         l=$((i + 1))
         line=$(echo $resp | jq ".[$i]")
@@ -457,6 +459,7 @@ function parseResponse() {
         dataResponse[$l,3]=$(echo $line | jq -r ".comment") 
         dataResponse[$l,4]=$(echo $line | jq -r ".type") 
     done
+
     comment=$(echo $response | jq -r .grade.comment)
     type=$(echo $response | jq -r .grade.type)
 }
@@ -499,11 +502,11 @@ function formatViewGraph() {
         view="${view}${dataResponse[$i,1]}; ${dataResponse[$i,2]}; ${dataResponse[$i,3]}; $color\n"
     done
     color=$(chooseColorWithType $type)
-    view="${view};; ${comment}; ${color}"
+    view="$view;; $comment; $color"
 }
 
 function showViewGraph() {
-    if [ $exam -eq 1 ]; then
+    if [ $exam -eq 1 ]; then # en mode exam
         echo -e $view | awk -F ';' "$PARSER" |\
         yad --window-icon="gtk-execute" \
         --title="Vérif Marionnet exam"  \
@@ -515,9 +518,8 @@ function showViewGraph() {
         --column CheckID:TXT \
         --column Note:TXT \
         --column Message:TXT \
-        --column @back@ \
-        --mouse
-    else
+        --column @back@
+    else # en mode normal
         echo -e $view | awk -F ';' "$PARSER" |\
         yad --window-icon="gtk-execute" \
         --title="Vérif Marionnet"  \
@@ -530,8 +532,7 @@ function showViewGraph() {
         --column CheckID:TXT \
         --column Note:TXT \
         --column Message:TXT \
-        --column @back@ \
-        --mouse
+        --column @back@
     fi
 
     back=$?
@@ -549,12 +550,7 @@ function evaluation() {
 
     parseResponse
     [ $graph -eq 1 ] && formatViewGraph || formatViewText
-
-    if [ $graph -eq 0 ]; then
-        echo -e $view
-    else
-        showViewGraph
-    fi
+    [ $graph -eq 1 ] && showViewGraph || echo -e $view
 }
 
 function normalModeText() {
