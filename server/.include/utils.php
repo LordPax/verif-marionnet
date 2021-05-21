@@ -147,7 +147,7 @@ function writeLog(array $res, object $data, int $mode, string $logFile) {
 
     $note20 = round(20 * $note / $totPts, 2);
 
-    $log = " * Date:$date; Note:$note/$totPts; Note20:$note20/20; idExam:$data->idExam";
+    $log = " * Date:$date; Note:$note/$totPts; Note20:$note20/20; idExam:$data->projectName";
     if ($mode == 1) // en mode exam
         $log .= "; firstName:$data->firstName; name:$data->name";
     $log .= "$questionLog\n";
