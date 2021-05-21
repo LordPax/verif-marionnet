@@ -5,17 +5,18 @@
 export TEXTDOMAIN="verifMario"
 distrib=""
 
-serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
-serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
+serverUrl="https://www-info.iutv.univ-paris13.fr/verifMario.d"
+serverPOST="$serverUrl/.eval.php" # url ou envoyer la requete
 # serverPOST="http://192.168.1.24/server/eval.php"
 # source="marioTestJson" # le dossier ou chercher les fichiers
 
 packages="curl ssh jq yad"
-projectName="exerciceTP.mar"
+projectFile="exerciceTP.mar"
 requestName=".requetes.json"
 idSsh=".id_rsa_marionnet"
 # desktop="verifMario.desktop"
-file="$projectName $requestName $idSsh"
+file="$requestName $idSsh"
+# file="$projectFile $requestName $idSsh"
 prefixDir="exo"
 timing=1200 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
@@ -25,7 +26,7 @@ response=""
 
 name=""
 firstName=""
-idExam=""
+projectName=""
 choice=""
 back=0
 
@@ -84,7 +85,7 @@ fi
 # marioSsh <machine> <cmd>
 function marioSsh() {
     local cde=$0
-    local PRIVATE_RSA_KEY=$idExam/$idSsh
+    local PRIVATE_RSA_KEY=$projectName/$idSsh
 
     # we need more checks
     #-- Checks
@@ -125,19 +126,9 @@ function marioSsh() {
         echo $pubKey >> ~/.ssh/known_hosts
     fi
     
-    LC_ALL=C
-    ssh -xq -i $PRIVATE_RSA_KEY root@$ip $Cmd
+    LC_ALL=C ssh -xq -i $PRIVATE_RSA_KEY root@$ip $Cmd
     if [ $? -eq 255 ]; then
         echo_debug $"\e[31mERROR :\e[0m Ssh connection failed with $Host" err
-    fi
-}
-
-# cidr2mask <cidr>
-function cidr2mask() {
-    if [ "A$1" != "A" ]; then
-        set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
-        [ $1 -gt 1 ] && shift $1 || shift
-        echo ${1-0}.${2-0}.${3-0}.${4-0}
     fi
 }
 
@@ -248,9 +239,11 @@ function inputText() {
             read -p $"Enter your name : " name
         done
     fi
-    while [ "A$idExam" = "A" ]; do
-        read -p $"Enter exercise name : " idExam
+    while [ "A$projectName" = "A" ]; do
+        read -p $"Enter exercise name : " projectName
+        projectFile="${projectName}.mar"
     done
+    file="$projectFile $file"
 }
 
 function inputGraph() {
@@ -277,19 +270,22 @@ function inputGraph() {
             if echo $output | grep -E ".+\|.+\|.+\|" &> /dev/null; then
                 firstName=$(echo $output | cut -d '|' -f 1)
                 name=$(echo $output | cut -d '|' -f 2)
-                idExam=$(echo $output | cut -d '|' -f 3)
+                projectName=$(echo $output | cut -d '|' -f 3)
+                projectFile="${projectName}.mar"
             else
                 echo_err $"All field must be completed"
                 inputGraph
             fi
         else
             if echo $output | grep -E ".+\|" &> /dev/null; then
-                idExam=$(echo $output | cut -d '|' -f 1)
+                projectName=$(echo $output | cut -d '|' -f 1)
+                projectFile="${projectName}.mar"
             else
                 echo_err $"All field must be completed"
                 inputGraph
             fi
         fi
+        file="$projectFile $file"
     else
         exit 0
     fi
@@ -308,54 +304,55 @@ function verification() {
 
         echo $"Marionnet daemon started"
     fi
+    mkdir -p ~/.ssh
 }
 
 function launchMarionnet() {
-    if [ -f $idExam/$projectName ]; then
-        res=$(ps aux | grep marionnet | grep $projectName | wc -l)
+    if [ -f $projectName/$projectFile ]; then
+        res=$(ps aux | grep marionnet | grep $projectFile | wc -l)
         if [ $res -eq 0 ]; then 
-            marionnet $idExam/$projectName 2> /dev/null &
+            marionnet $projectName/$projectFile 2> /dev/null &
             echo $"Marionnet started"
         else
             echo_debug $"Marionnet already running"
         fi
     else
-        echo_err $"Marionnet project $idExam/$projectName does not exist"
+        echo_err $"Marionnet project $projectName/$projectFile does not exist"
         exit 1
     fi
 }
 
 function getMarionnetFile() {
-    if [ ! -d $idExam ]; then
-        mkdir $idExam
+    if [ ! -d $projectName ]; then
+        mkdir $projectName
     fi
 
     for f in $file; do
-        if [ ! -f $idExam/$f ]; then
-            echo_debug $"Downloading $idExam/$f ..."
-            curl -s $serverUrl/$idExam/$f -o $idExam/$f
-            if grep '404 Not Found' $idExam/$f &> /dev/null; then
-                rm -rf $idExam
-                echo_err $"Id $idExam does not exist"
+        if [ ! -f $projectName/$f ]; then
+            echo_debug $"Downloading $projectName/$f ..."
+            curl -s $serverUrl/$projectName/$f -o $projectName/$f
+            if grep '404 Not Found' $projectName/$f &> /dev/null; then
+                rm -rf $projectName
+                echo_err $"Id $projectName does not exist"
                 exit 1
             fi
         else
-            echo_debug $"$idExam/$f already exist"
+            echo_debug $"$projectName/$f already exist"
         fi
     done
 
-    if [ -f $idExam/$idSsh ]; then
-        res=$(ls -l $idExam/$idSsh | cut -d ' ' -f 1)
+    if [ -f $projectName/$idSsh ]; then
+        res=$(ls -l $projectName/$idSsh | cut -d ' ' -f 1)
         if [ $res != "-rw-------" ]; then
             echo_debug $"Change chmod right to 600"
-            chmod 600 $idExam/$idSsh
+            chmod 600 $projectName/$idSsh
         fi
     fi
 }
 
 function parseRequest() {
     echo_debug "Parsing request ..."
-    nbLine=$(grep label $idExam/$requestName 2> /dev/null | wc -l)
+    nbLine=$(grep label $projectName/$requestName 2> /dev/null | wc -l)
     local l=0
 
     if [ $nbLine -eq 0 ]; then
@@ -365,15 +362,15 @@ function parseRequest() {
 
     for i in $(seq 0 $((nbLine - 1))); do
         l=$((i+1))
-        dataRequest[$l,1]=$(jq -r ".[$i].label" < $idExam/$requestName)
-        dataRequest[$l,2]=$(jq -r ".[$i].command" < $idExam/$requestName)
+        dataRequest[$l,1]=$(jq -r ".[$i].label" < $projectName/$requestName)
+        dataRequest[$l,2]=$(jq -r ".[$i].command" < $projectName/$requestName)
     done
 
     [ $graph -eq 0 ] && echo $"$nbLine request found"
 }
 
 function parseCable() {
-    # local pName=$(echo $projectName | cut -d . -f 1)
+    # local pName=$(echo $projectFile | cut -d . -f 1)
     local pName=$(ls $TMPDIR/marionnet-*.dir/ 2> /dev/null | grep -Ev "^(hub|hublet|sparse-swap|switch)-")
     local patternD='DIRECT CABLE EDGES'
     local patternC='CROSSOVER/SERIAL CABLE EDGES'
@@ -414,7 +411,7 @@ function formatJson() {
     for i in $(seq 1 $(( nbLine-1 ))); do
         send="$send\"${data[$i]}\","
     done
-    send="$send\"${data[$nbLine]}\"], \"examMode\":$exam, \"idExam\":\"$idExam\""
+    send="$send\"${data[$nbLine]}\"], \"examMode\":$exam, \"projectName\":\"$projectName\""
     if [ $exam -eq 1 ]; then
         send="$send, \"firstName\":\"$firstName\", \"name\":\"$name\"}"
     else
@@ -573,7 +570,7 @@ function normalModeText() {
             read -p $"Would you like to be evaluated (y/n) : " choice
         done
         if [ "$choice" = "y" ]; then
-            res=$(ps aux | grep marionnet | grep $projectName | wc -l)
+            res=$(ps aux | grep marionnet | grep $projectFile | wc -l)
             if [ $res -eq 1 ]; then 
                 evaluation
             else 
@@ -599,7 +596,7 @@ function normalModeGraph() {
 
     back=$?
     while [ $back -eq 0 ]; do
-        res=$(ps aux | grep marionnet | grep $projectName | wc -l)
+        res=$(ps aux | grep marionnet | grep $projectFile | wc -l)
         if [ $res -eq 1 ]; then 
             evaluation
         else 
@@ -646,6 +643,14 @@ function examModeGraph() {
     launchMarionnet
     timerGraph
     evaluation
+}
+# cidr2mask <cidr>
+function cidr2mask() {
+    if [ "A$1" != "A" ]; then
+        set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
+        [ $1 -gt 1 ] && shift $1 || shift
+        echo ${1-0}.${2-0}.${3-0}.${4-0}
+    fi
 }
 
 installDep
