@@ -12,8 +12,9 @@ serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
 
 packages="curl ssh jq yad"
 projectName="exerciceTP.mar"
-requestName="requetes.json"
-idSsh="id_rsa_marionnet"
+requestName=".requetes.json"
+idSsh=".id_rsa_marionnet"
+# desktop="verifMario.desktop"
 file="$projectName $requestName $idSsh"
 prefixDir="exo"
 timing=1200 # temps en seconde
@@ -54,7 +55,8 @@ TMPDIR=$([ "A$TMPDIR" = "A" ] && echo /tmp || echo $TMPDIR)
 # echo_debug <msg> [sortie]
 function echo_debug() {
     if [ "A$1" != "A" ]; then
-        local out=$([ "$2" = "err" ] && echo /dev/stderr || echo /dev/stdout) # sortir par défaut : stdout
+        tty=$(tty)
+        local out=$([ "$2" = "err" ] && echo /dev/stderr || echo $tty) # sortir par défaut : stdout
         [ $debug -eq 1 ] && echo -e $1 > $out
     fi
 }
@@ -110,15 +112,20 @@ function marioSsh() {
     fi
 
     local ip=`/sbin/route -n |grep $tap |cut -d ' ' -f 1`
+    
+    if [ ! -f ~/.ssh/known_hosts ]; then
+        touch ~/.ssh/known_hosts
+    fi
 
     local pubKey=$(ssh-keyscan -t ecdsa $ip 2> /dev/null)
-    local ref=$(cat ~/.ssh/known_hosts | grep $ip | cut -d ' ' -f 3)
+    local ref=$(grep $ip ~/.ssh/known_hosts | cut -d ' ' -f 3)
     local search=$(echo $pubKey | cut -d ' ' -f 3)
 
     if [ "$search" != "$ref" ]; then
         echo $pubKey >> ~/.ssh/known_hosts
     fi
-
+    
+    LC_ALL=C
     ssh -xq -i $PRIVATE_RSA_KEY root@$ip $Cmd
     if [ $? -eq 255 ]; then
         echo_debug $"\e[31mERROR :\e[0m Ssh connection failed with $Host" err
@@ -223,7 +230,11 @@ function installDep() {
             echo_debug "Package $p found"
         else
             echo "Installing $p ..."
-            sudo apt install $p
+            if [ "A$VNC_PW" != "A" ]; then
+                echo $VNC_PW | sudo -S apt-get -qq install $p
+            else
+                sudo apt-get install $p
+            fi
         fi
     done
 }
@@ -314,14 +325,14 @@ function launchMarionnet() {
     fi
 }
 
-function getMarionetFile() {
+function getMarionnetFile() {
     if [ ! -d $idExam ]; then
         mkdir $idExam
     fi
 
     for f in $file; do
         if [ ! -f $idExam/$f ]; then
-            echo "Downloading $idExam/$f ..."
+            echo_debug $"Downloading $idExam/$f ..."
             curl -s $serverUrl/$idExam/$f -o $idExam/$f
             if grep '404 Not Found' $idExam/$f &> /dev/null; then
                 rm -rf $idExam
@@ -640,7 +651,7 @@ function examModeGraph() {
 installDep
 verification
 [ $graph -eq 1 ] && inputGraph || inputText
-getMarionetFile
+getMarionnetFile
 if [ $exam -eq 1 ]; then
     [ $graph -eq 1 ] && examModeGraph || examModeText
 else
