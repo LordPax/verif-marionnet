@@ -5,26 +5,29 @@
 export TEXTDOMAIN="verifMario"
 distrib=""
 
-serverUrl="http://www-info.iutv.univ-paris13.fr/~gauthier/"
-serverPOST="$serverUrl/eval.php" # url ou envoyer la requete
+serverUrl="https://www-info.iutv.univ-paris13.fr/verifMario.d"
+serverPOST="$serverUrl/.eval.php" # url ou envoyer la requete
 # serverPOST="http://192.168.1.24/server/eval.php"
 # source="marioTestJson" # le dossier ou chercher les fichiers
 
 packages="curl ssh jq yad"
-projectName="exerciceTP.mar"
-requestName="requetes.json"
-idSsh="id_rsa_marionnet"
-file="$projectName $requestName $idSsh"
+projectFile="exerciceTP.mar"
+requestName=".requetes.json"
+idSsh=".id_rsa_marionnet"
+# desktop="verifMario.desktop"
+file="$requestName $idSsh"
+# file="$projectFile $requestName $idSsh"
 prefixDir="exo"
 timing=1200 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
 LOGFILE=$(mktemp -u)
 touch $LOGFILE
 response=""
+projectList='TPS2_exo5!TPS2_exo6!TPS2_exo7'
 
 name=""
 firstName=""
-idExam=""
+projectName=""
 choice=""
 back=0
 
@@ -51,10 +54,12 @@ graph=1
 exam=$([ $0 == './examMario' ] && echo 1 || echo 0)
 TMPDIR=$([ "A$TMPDIR" = "A" ] && echo /tmp || echo $TMPDIR)
 
+export tty=$(tty)
+
 # echo_debug <msg> [sortie]
 function echo_debug() {
     if [ "A$1" != "A" ]; then
-        local out=$([ "$2" = "err" ] && echo /dev/stderr || echo /dev/stdout) # sortir par défaut : stdout
+        local out=$([ "$2" = "err" ] && echo /dev/stderr || echo $tty) # sortir par défaut : stdout
         [ $debug -eq 1 ] && echo -e $1 > $out
     fi
 }
@@ -82,7 +87,7 @@ fi
 # marioSsh <machine> <cmd>
 function marioSsh() {
     local cde=$0
-    local PRIVATE_RSA_KEY=$idExam/$idSsh
+    local PRIVATE_RSA_KEY=$projectName/$idSsh
 
     # we need more checks
     #-- Checks
@@ -98,7 +103,7 @@ function marioSsh() {
 
     resu=`ps aw |grep marionnet|grep "hostname=$Host "|head -1|sed -e 's/^.* eth42=\([^ ]*\) .*$/\1/'`'/'
     if [ "$resu" = "/" ] ; then
-        echo_err $"Machine $Host not found in current marionnet project"
+        echo_err $"Machine or Router $Host not found or not running in current marionnet project"
         exit 1
     fi
 
@@ -110,16 +115,20 @@ function marioSsh() {
     fi
 
     local ip=`/sbin/route -n |grep $tap |cut -d ' ' -f 1`
+    
+    if [ ! -f ~/.ssh/known_hosts ]; then
+        touch ~/.ssh/known_hosts
+    fi
 
     local pubKey=$(ssh-keyscan -t ecdsa $ip 2> /dev/null)
-    local ref=$(cat ~/.ssh/known_hosts | grep $ip | cut -d ' ' -f 3)
+    local ref=$(grep $ip ~/.ssh/known_hosts | cut -d ' ' -f 3)
     local search=$(echo $pubKey | cut -d ' ' -f 3)
 
     if [ "$search" != "$ref" ]; then
         echo $pubKey >> ~/.ssh/known_hosts
     fi
-
-    ssh -xq -i $PRIVATE_RSA_KEY root@$ip $Cmd
+    
+    LC_ALL=C ssh -xq -i $PRIVATE_RSA_KEY root@$ip $Cmd
     if [ $? -eq 255 ]; then
         echo_debug $"\e[31mERROR :\e[0m Ssh connection failed with $Host" err
     fi
@@ -128,9 +137,11 @@ function marioSsh() {
 # cidr2mask <cidr>
 function cidr2mask() {
     if [ "A$1" != "A" ]; then
-        set -- $(( 5 - ($1 / 8) )) 255 255 255 255 $(( (255 << (8 - ($1 % 8))) & 255 )) 0 0 0
-        [ $1 -gt 1 ] && shift $1 || shift
-        echo ${1-0}.${2-0}.${3-0}.${4-0}
+        local decal=$(( 4 - ($1 / 8) ))
+        local cutByte=$(( (255 << (8 - ($1 % 8))) & 255 ))
+        set -- 255 255 255 255 $cutByte 0 0 0
+        [ $decal -gt 0 ] && shift $decal
+        echo ${1}.${2}.${3}.${4}
     fi
 }
 
@@ -138,7 +149,7 @@ function cidr2mask() {
 function testPresence() {
     if [ "A$1" != "A" ]; then
         local res=$(ps aw | grep marionnet | grep "$1" | head -1)
-        [ "A$res" != "A" ] && echo ok
+        [ "A$res" != "A" ] && echo ok || echo ERROR 
     fi
 }
 
@@ -146,7 +157,8 @@ function testPresence() {
 function getIPAddress() {
     if [ "A$1" != "A" ]; then
         local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
-        marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d '/' -f 1
+        local res=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d '/' -f 1)
+        [ "A$res" != "A" ] && echo $res || echo ERROR 
     fi
 }
 
@@ -154,8 +166,18 @@ function getIPAddress() {
 function getMask() {
     if [ "A$1" != "A" ]; then
         local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
-        cidr=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d '/' -f 2)
-        cidr2mask $cidr
+        local cidr=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d '/' -f 2)
+        local res=$(cidr2mask $cidr)
+        [ "A$res" != "A" ] && echo $res || echo ERROR 
+    fi
+}
+
+# getFullIP <machine> [interface]
+function getFillIP() {
+    if [ "A$1" != "A" ]; then
+        local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
+        local res=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}')
+        [ "A$res" != "A" ] && echo $res || echo ERROR 
     fi
 }
 
@@ -163,7 +185,8 @@ function getMask() {
 function getRoute() {
     if [ "A$1" != "A" ] && [ "A$2" != "A" ]; then
         local route=$([ "$2" = "default" ] && echo '0.0.0.0' || echo $2)
-        marioSsh $1 route -n | grep "^$route"
+        local res=$(marioSsh $1 route -n | grep "^$route")
+        [ "A$res" != "A" ] && echo $res || echo ERROR 
     fi
 }
 
@@ -171,7 +194,8 @@ function getRoute() {
 function getNet() {
     if [ "A$1" != "A" ]; then
         local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
-        marioSsh $1 route -n | grep "U[^G] .* $eth$" | awk '{print $1}'
+        local res=$(marioSsh $1 route -n | grep "U[^G] .* $eth$" | awk '{print $1}')
+        [ "A$res" != "A" ] && echo $res || echo ERROR 
     fi
 }
 
@@ -180,14 +204,16 @@ function pingMachine() {
     if [ "A$1" != "A" ] && [ "A$2" != "A" ]; then
         local eth=$([ "A$3" != "A" ] && echo $3 || echo eth0)
         local ip=$(getIPAddress $2 $eth)
-        marioSsh $1 ping -c 1 -w 1 $ip &> /dev/null && echo ok
+        if [ "$ip" = "ERROR" ]; then echo ERROR ; return; fi
+        marioSsh $1 ping -c 1 -w 1 $ip &> /dev/null && echo ok || echo ERROR
     fi
 }
 
 # getCable <machine1> <machine2>
 function getCable() {
     if [ "A$1" != "A" ] && [ "A$2" != "A" ]; then
-        echo ${cable[$1,$2]}
+        local res=$(echo ${cable[$1,$2]})
+        [ "A$res" != "A" ] && echo $res || echo ERROR 
     fi
 }
 
@@ -211,7 +237,7 @@ function checkIP() {
             done
         fi
 
-        [ "$res" = "$net" ] && echo ok
+        [ "$res" = "$net" ] && echo ok || ERROR
     fi
 }
 
@@ -223,7 +249,11 @@ function installDep() {
             echo_debug "Package $p found"
         else
             echo "Installing $p ..."
-            sudo apt install $p
+            if [ "A$VNC_PW" != "A" ]; then
+                echo $VNC_PW | sudo -S apt-get -qq install $p >/dev/null 2>&1
+            else
+                sudo apt-get install $p
+            fi
         fi
     done
 }
@@ -237,24 +267,26 @@ function inputText() {
             read -p $"Enter your name : " name
         done
     fi
-    while [ "A$idExam" = "A" ]; do
-        read -p $"Enter exercise name : " idExam
+    while [ "A$projectName" = "A" ]; do
+        read -p $"Enter exercise name : " projectName
+        projectFile="${projectName}.mar"
     done
+    file="$projectFile $file"
 }
 
 function inputGraph() {
     if [ $exam -eq 1 ]; then
         local output=$(yad --form --title "input" \
+        --field $"Enter exercise name":CBE $projectList \
         --field $"Enter your first name" \
         --field $"Enter your name" \
-        --field $"Enter exercise name" \
         --button=envoyer:0 \
         --button=gtk-cancel:1 \
         --on-top \
         --mouse)
     else
         local output=$(yad --form --title "input" \
-        --field $"Enter exercise name" \
+        --field $"Enter exercise name":CBE $projectList\
         --button=envoyer:0 \
         --button=gtk-cancel:1 \
         --on-top \
@@ -264,21 +296,24 @@ function inputGraph() {
     if [ "A$output" != "A" ]; then
         if [ $exam -eq 1 ]; then
             if echo $output | grep -E ".+\|.+\|.+\|" &> /dev/null; then
-                firstName=$(echo $output | cut -d '|' -f 1)
-                name=$(echo $output | cut -d '|' -f 2)
-                idExam=$(echo $output | cut -d '|' -f 3)
+                projectName=$(echo $output | cut -d '|' -f 1)
+                firstName=$(echo $output | cut -d '|' -f 2)
+                name=$(echo $output | cut -d '|' -f 3)
+                projectFile="${projectName}.mar"
             else
                 echo_err $"All field must be completed"
                 inputGraph
             fi
         else
             if echo $output | grep -E ".+\|" &> /dev/null; then
-                idExam=$(echo $output | cut -d '|' -f 1)
+                projectName=$(echo $output | cut -d '|' -f 1)
+                projectFile="${projectName}.mar"
             else
                 echo_err $"All field must be completed"
                 inputGraph
             fi
         fi
+        file="$projectFile $file"
     else
         exit 0
     fi
@@ -297,54 +332,55 @@ function verification() {
 
         echo $"Marionnet daemon started"
     fi
+    mkdir -p ~/.ssh
 }
 
 function launchMarionnet() {
-    if [ -f $idExam/$projectName ]; then
-        res=$(ps aux | grep marionnet | grep $projectName | wc -l)
+    if [ -f $projectName/$projectFile ]; then
+        res=$(ps aux | grep marionnet | grep $projectFile | wc -l)
         if [ $res -eq 0 ]; then 
-            marionnet $idExam/$projectName 2> /dev/null &
+            marionnet $projectName/$projectFile 2> /dev/null &
             echo $"Marionnet started"
         else
             echo_debug $"Marionnet already running"
         fi
     else
-        echo_err $"Marionnet project $idExam/$projectName does not exist"
+        echo_err $"Marionnet project $projectName/$projectFile does not exist"
         exit 1
     fi
 }
 
-function getMarionetFile() {
-    if [ ! -d $idExam ]; then
-        mkdir $idExam
+function getMarionnetFile() {
+    if [ ! -d $projectName ]; then
+        mkdir $projectName
     fi
 
     for f in $file; do
-        if [ ! -f $idExam/$f ]; then
-            echo "Downloading $idExam/$f ..."
-            curl -s $serverUrl/$idExam/$f -o $idExam/$f
-            if grep '404 Not Found' $idExam/$f &> /dev/null; then
-                rm -rf $idExam
-                echo_err $"Id $idExam does not exist"
+        if [ ! -f $projectName/$f ]; then
+            echo_debug $"Downloading $projectName/$f ..."
+            curl -s $serverUrl/$projectName/$f -o $projectName/$f
+            if grep '404 Not Found' $projectName/$f &> /dev/null; then
+                rm -rf $projectName
+                echo_err $"Id $projectName does not exist"
                 exit 1
             fi
         else
-            echo_debug $"$idExam/$f already exist"
+            echo_debug $"$projectName/$f already exist"
         fi
     done
 
-    if [ -f $idExam/$idSsh ]; then
-        res=$(ls -l $idExam/$idSsh | cut -d ' ' -f 1)
+    if [ -f $projectName/$idSsh ]; then
+        res=$(ls -l $projectName/$idSsh | cut -d ' ' -f 1)
         if [ $res != "-rw-------" ]; then
             echo_debug $"Change chmod right to 600"
-            chmod 600 $idExam/$idSsh
+            chmod 600 $projectName/$idSsh
         fi
     fi
 }
 
 function parseRequest() {
     echo_debug "Parsing request ..."
-    nbLine=$(grep label $idExam/$requestName 2> /dev/null | wc -l)
+    nbLine=$(grep label $projectName/$requestName 2> /dev/null | wc -l)
     local l=0
 
     if [ $nbLine -eq 0 ]; then
@@ -354,15 +390,15 @@ function parseRequest() {
 
     for i in $(seq 0 $((nbLine - 1))); do
         l=$((i+1))
-        dataRequest[$l,1]=$(jq -r ".[$i].label" < $idExam/$requestName)
-        dataRequest[$l,2]=$(jq -r ".[$i].command" < $idExam/$requestName)
+        dataRequest[$l,1]=$(jq -r ".[$i].label" < $projectName/$requestName)
+        dataRequest[$l,2]=$(jq -r ".[$i].command" < $projectName/$requestName)
     done
 
     [ $graph -eq 0 ] && echo $"$nbLine request found"
 }
 
 function parseCable() {
-    # local pName=$(echo $projectName | cut -d . -f 1)
+    # local pName=$(echo $projectFile | cut -d . -f 1)
     local pName=$(ls $TMPDIR/marionnet-*.dir/ 2> /dev/null | grep -Ev "^(hub|hublet|sparse-swap|switch)-")
     local patternD='DIRECT CABLE EDGES'
     local patternC='CROSSOVER/SERIAL CABLE EDGES'
@@ -403,7 +439,7 @@ function formatJson() {
     for i in $(seq 1 $(( nbLine-1 ))); do
         send="$send\"${data[$i]}\","
     done
-    send="$send\"${data[$nbLine]}\"], \"examMode\":$exam, \"idExam\":\"$idExam\""
+    send="$send\"${data[$nbLine]}\"], \"examMode\":$exam, \"projectName\":\"$projectName\""
     if [ $exam -eq 1 ]; then
         send="$send, \"firstName\":\"$firstName\", \"name\":\"$name\"}"
     else
@@ -454,6 +490,8 @@ function parseResponse() {
     for i in $(seq 0 $((nbLine - 1))); do
         l=$((i + 1))
         line=$(echo $resp | jq ".[$i]")
+        dr=$(echo $line | jq -r ".label")
+        if [ "A$dr" = "Anull" ]; then break; fi
         dataResponse[$l,1]=$(echo $line | jq -r ".label") 
         dataResponse[$l,2]=$(echo $line | jq -r ".pts") 
         dataResponse[$l,3]=$(echo $line | jq -r ".comment") 
@@ -471,9 +509,9 @@ function chooseColorWithType() {
         
         if [ "$1" = "good" ]; then
             col=$([ $graph -eq 0 ] && echo "\e[32m" || echo "green")
-        elif [ "$1" = "wrong" ]; then
+        elif [ "$1" = "wrong" ] || [ "$1" = "mandatoryWrong" ]; then
             col=$([ $graph -eq 0 ] && echo "\e[31;1m" || echo "red")
-        elif [ "$1" = "partial" ]; then
+        elif [ "$1" = "partial" ] || [ "$1" = "toleranceOut" ]; then
             col=$([ $graph -eq 0 ] && echo "\e[93;1m" || echo "orange")
         else
             col=$([ $graph -eq 0 ] && echo "\e[34m" || echo "blue")
@@ -488,7 +526,9 @@ function formatViewText() {
     local color=""
     for i in $(seq 1 $nbLine); do
         color=$(chooseColorWithType ${dataResponse[$i,4]})
-        view="${view}${dataResponse[$i,1]} \t ${color}${dataResponse[$i,2]} \t ${dataResponse[$i,3]}\e[0m\n"
+        if [ ${dataResponse[$i,4]} != "mandatoryGood" ] && [ ${dataResponse[$i,4]} != "toleranceOut" ]; then
+            view="${view}${dataResponse[$i,1]} \t ${color}${dataResponse[$i,2]} \t ${dataResponse[$i,3]}\e[0m\n"
+        fi
     done
     color=$(chooseColorWithType $type)
     view="${view}${color}${comment}\e[0m"
@@ -499,7 +539,9 @@ function formatViewGraph() {
     local color=""
     for i in $(seq 1 $nbLine); do
         color=$(chooseColorWithType ${dataResponse[$i,4]})
-        view="${view}${dataResponse[$i,1]}; ${dataResponse[$i,2]}; ${dataResponse[$i,3]}; $color\n"
+        if [ "${dataResponse[$i,4]}" != "mandatoryGood" ] && [ "${dataResponse[$i,4]}" != "toleranceOut" ]; then
+            view="${view}${dataResponse[$i,1]}; ${dataResponse[$i,2]}; ${dataResponse[$i,3]}; $color\n"
+        fi
     done
     color=$(chooseColorWithType $type)
     view="$view;; $comment; $color"
@@ -539,6 +581,15 @@ function showViewGraph() {
 }
 
 function evaluation() {
+    if [ $(ps aux |grep -c 'marionnet/kernels') = 1 ]; then
+        if [ $graph -eq 1 ]; then
+            yad --image emblem-important --title "Error" --text "No machine or routeur is running!" \
+            --button "ok" --on-top --mouse
+        else
+            echo_err $"No virtual machine or router is running !"
+        fi
+        exit 1
+    fi
     [ $graph -eq 0 ] && echo $"Evaluation in progress ..."
 
     parseRequest
@@ -559,10 +610,10 @@ function normalModeText() {
     while [ "$choice" != "n" ]; do
         choice=""
         while [ "A$choice" = "A" ] || [ "$choice" != "y" ] && [ "$choice" != "n" ]; do
-            read -p $"Would you like to be evaluated (y/n) : " choice
+            read -p $"Do you want to check your marionnet project (y/n) : " choice
         done
         if [ "$choice" = "y" ]; then
-            res=$(ps aux | grep marionnet | grep $projectName | wc -l)
+            res=$(ps aux | grep marionnet | grep $projectFile | wc -l)
             if [ $res -eq 1 ]; then 
                 evaluation
             else 
@@ -582,13 +633,13 @@ function normalModeGraph() {
     --title Evaluation \
     --button=gtk-yes:0 \
     --button=gtk-no:1 \
-    --text $"Would you like to be evaluated" \
+    --text $"Do you want to check your marionnet project ?" \
     --on-top \
     --mouse
 
     back=$?
     while [ $back -eq 0 ]; do
-        res=$(ps aux | grep marionnet | grep $projectName | wc -l)
+        res=$(ps aux | grep marionnet | grep $projectFile | wc -l)
         if [ $res -eq 1 ]; then 
             evaluation
         else 
@@ -640,7 +691,7 @@ function examModeGraph() {
 installDep
 verification
 [ $graph -eq 1 ] && inputGraph || inputText
-getMarionetFile
+getMarionnetFile
 if [ $exam -eq 1 ]; then
     [ $graph -eq 1 ] && examModeGraph || examModeText
 else
@@ -648,3 +699,4 @@ else
 fi
 
 rm -f $LOGFILE
+perl -MFcntl -e 'fcntl STDIN, F_SETFL, fcntl(STDIN, F_GETFL, 0) & ~O_NONBLOCK'

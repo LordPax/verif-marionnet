@@ -10,3 +10,4 @@ client/script
 server/log
 server/*.txt
 server/*.json
+server/site/include/phpCAS-1.3.6/

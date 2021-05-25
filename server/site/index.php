@@ -1,32 +1,26 @@
 <?php
-include 'include/config.php';
-// include 'include/auth.php';
+require_once "include/config.php";
+// require_once "include/$cas_path/CAS.php";
+require_once "/usr/share/pear/CAS.php";
+require_once "Models/Model.php";
+require_once "Controllers/Controller.php";
 
-if (!isset($_SESSION['connect'])) {
-?>
+$controllers = ['home'];
+$controller_default = 'home';
 
-<html>
-    <head>
-        <title>Connexion</title>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" type="text/css" href="include/design.css">
-    </head>
-    <body>
-        <section>
-            <div class="connect">
-                <form class="auth" action="include/auth.php" method="post">
-                    <input type="text" name="login" id="login" placeholder="Login" required>
-                    <input type="password" name="pass" id="pass" placeholder="Password" required>
-                    <input type="submit" name="sub" value="Connexion" />
-                </form>
-            </div>
-        </section>
-    </body>
-</html>
-
-<?php
+if (isset($_GET['controller']) and in_array($_GET['controller'], $controllers)) {
+    $nom_controller = $_GET['controller'];
+} else {
+    $nom_controller = $controller_default;
 }
-else {
-    header("Location: $domain/baremePage.php");
+
+$nom_classe = 'Controller_' . $nom_controller;
+$nom_fichier = 'Controllers/' . $nom_classe . '.php';
+
+if (file_exists($nom_fichier)) {
+    require_once $nom_fichier;
+    new $nom_classe();
+} else {
+    die("Error 404: not found!");
 }
 ?>

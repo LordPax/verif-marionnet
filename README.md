@@ -3,10 +3,12 @@
 examen de TP/évalutation automatique TPS marionnet.
 
 ## Format du fichier bareme.json
-* info : n'est pas compté dans les notes
+* info : est affiché en bleu et n'est pas compté dans les notes
 * good : est affiché en vert
+* mandatoryGood : n'est pas affiché par défault 
 * partial : est affiché en orange
 * wrong : est affiché en rouge
+* wandatoryWrong : est affiché en rouge et intéromp l'évaluation indépendamment de la variable tolerance
 ```json
 {
     "tolerance" : 0,
@@ -140,6 +142,20 @@ getMask <machine> [interface]
 * exemple
 ```bash
 getMask m1
+```
+### getFullIP 
+Affiche l'ip et le mask cidr de machine (par défaut : interface=eth0)
+* syntax
+```bash
+getFullIP <machine> [interface]
+```
+* exemple
+```bash
+getMask m1
+```
+* format de l'affichage
+```
+10.0.0.1/24
 ```
 ### getRoute
 Affiche la route de la machine
