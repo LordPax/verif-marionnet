@@ -237,7 +237,7 @@ function checkIP() {
             done
         fi
 
-        [ "$res" = "$net" ] && echo ok || ERROR
+        [ "$res" = "$net" ] && echo ok || echo ERROR
     fi
 }
 
