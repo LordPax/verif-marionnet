@@ -55,6 +55,7 @@ function evaluation(object $data, array $content, int $tolerance) {
     $valid = 0;
     $comment = "";
     $nbErr = 0;
+    $mandatoryErr = false;
     $type = "";
 
     $totPts = 0;
@@ -66,8 +67,18 @@ function evaluation(object $data, array $content, int $tolerance) {
 
     foreach ($data->data as $k => $v) { 
         $bareme = $content[$k]->bareme !== 0 ? $content[$k]->bareme : $content[$k]->responses[0]->pts;
-    
-        if ($nbErr <= $tolerance) {
+
+        if ($mandatoryErr) {
+            $pts = 0;
+            $comment = "Erreur sur un type mandatory";
+            $type = "toleranceOut";
+        }
+        else if ($nbErr > $tolerance) {
+            $pts = 0;
+            $comment = "Trop d'erreurs (tolérance : $tolerance)";
+            $type = "toleranceOut";
+        }
+        else {
             for ($i = 0; $valid === 0 && $i < count($content[$k]->responses); $i++) {
                 $valid = validResponse($content[$k]->responses[$i], $v);
                 if ($valid === 1) {
@@ -77,18 +88,14 @@ function evaluation(object $data, array $content, int $tolerance) {
                 }
             }
         }
-        else {
-            $pts = 0;
-            $comment = "Niveau de tolérance aux erreurs dépassées (tolérance : $tolerance)";
-            $type = $content[$i]->responses[0]->type === "info" ? $content[$i]->responses[0]->type : "wrong";
-        }
     
-        if ($type !== "info") { // les pts ne sont pas compté si égale à info
+        if ($type === "good" || $type === "wrong" || $type === "toleranceOut") { 
             $totPts += $bareme;
             $note += $pts;
         }
     
-        if ($pts === 0) $nbErr++;
+        if ($type === "wrong") $nbErr++;
+        if ($type === "mandatoryWrong") $mandatoryErr = true;
     
         $questionLog .= "; ".$content[$k]->label.":$pts/$bareme";
         $show[] = [
