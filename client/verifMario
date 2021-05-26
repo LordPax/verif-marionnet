@@ -173,7 +173,7 @@ function getMask() {
 }
 
 # getFullIP <machine> [interface]
-function getFillIP() {
+function getFullIP() {
     if [ "A$1" != "A" ]; then
         local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
         local res=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}')
@@ -483,7 +483,7 @@ function parseResponse() {
     local line=""
 
     if [ "A$resp" = "A" ]; then
-        echo_err $"We have not response"
+        echo_err $"No response from server"
         exit 1
     fi
 
