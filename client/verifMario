@@ -7,21 +7,21 @@ distrib=""
 
 serverUrl="https://www-info.iutv.univ-paris13.fr/verifMario.d"
 serverPOST="$serverUrl/.eval.php" # url ou envoyer la requete
-# serverPOST="http://192.168.1.24/server/eval.php"
-# source="marioTestJson" # le dossier ou chercher les fichiers
+# serverPOST="http://192.168.1.24/server/.eval.php"
 
 packages="curl ssh jq yad"
 projectFile="exerciceTP.mar"
 requestName=".requetes.json"
 idSsh=".id_rsa_marionnet"
-# desktop="verifMario.desktop"
 file="$requestName $idSsh"
-# file="$projectFile $requestName $idSsh"
 prefixDir="exo"
 timing=1200 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4; fflush()}'
-LOGFILE=$(mktemp -u)
-touch $LOGFILE
+TMPVERIF=$(mktemp -d)
+TMPFILE="$TMPVERIF/tmpfile"
+TMPBUFF="$TMPVERIF/tmpbuff"
+touch $TMPFILE
+touch $TMPBUFF
 response=""
 projectList='TPS2_exo5!TPS2_exo6!TPS2_exo7'
 
@@ -67,7 +67,14 @@ function echo_debug() {
 # echo_err <msg>
 function echo_err() {
     if [ "A$1" != "A" ]; then
-        echo -e "\e[31mERROR :\e[0m $1" > /dev/stderr
+        if [ $graph -eq 0 ]; then
+            echo -e "\e[31mERROR :\e[0m $1" > /dev/stderr
+        else
+            yad --image emblem-important \
+            --title ERROR --text "ERROR : $1" \
+            --button gtk-ok \
+            --on-top --mouse
+        fi
     fi
 }
 
@@ -148,8 +155,7 @@ function cidr2mask() {
 # testPresence <machine>
 function testPresence() {
     if [ "A$1" != "A" ]; then
-        local res=$(ps aw | grep marionnet | grep "$1" | head -1)
-        [ "A$res" != "A" ] && echo ok || echo ERROR 
+        ps aw | grep marionnet | grep -q "$1" && echo ok || echo ERROR 
     fi
 }
 
@@ -169,6 +175,15 @@ function getMask() {
         local cidr=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d '/' -f 2)
         local res=$(cidr2mask $cidr)
         [ "A$res" != "A" ] && echo $res || echo ERROR 
+    fi
+}
+
+# getCidrMask <machine> [interface]
+function getCidrMask() {
+    if [ "A$1" != "A" ]; then
+        local eth=$([ "A$2" != "A" ] && echo $2 || echo eth0)
+        local cidr=$(marioSsh $1 ip addr show $eth | grep 'net ' | awk '{print $2}' | cut -d '/' -f 2)
+        [ "A$res" != "A" ] && echo $cidr || echo ERROR 
     fi
 }
 
@@ -354,16 +369,22 @@ function getMarionnetFile() {
     if [ ! -d $projectName ]; then
         mkdir $projectName
     fi
+    
+    if curl -s $serverUrl/$projectName/ | grep '404 Not Found' &> /dev/null; then
+        echo_err $"Id $projectName does not exist"
+        exit 1
+    fi
 
     for f in $file; do
-        if [ ! -f $projectName/$f ]; then
+        curl -s $serverUrl/$projectName/$f -o $TMPFILE
+        if grep '404 Not Found' $TMPFILE &> /dev/null; then
+            echo_err $"file $f does not exist"
+            exit 1
+        fi
+        
+        if [ ! -f $projectName/$f ] || ! diff $projectName/$f $TMPFILE &> /dev/null; then 
             echo_debug $"Downloading $projectName/$f ..."
-            curl -s $serverUrl/$projectName/$f -o $projectName/$f
-            if grep '404 Not Found' $projectName/$f &> /dev/null; then
-                rm -rf $projectName
-                echo_err $"Id $projectName does not exist"
-                exit 1
-            fi
+            cat $TMPFILE > $projectName/$f
         else
             echo_debug $"$projectName/$f already exist"
         fi
@@ -455,9 +476,7 @@ function getDataText() {
 
         data[$i]=$(${dataRequest[$i,2]}) # execute la commande
 
-        # echo ${dataRequest[$i,1]}
-        # echo ${dataRequest[$i,2]}
-        # echo ${data[$i]}
+        echo_debug "label : ${dataRequest[$i,1]}, command : ${dataRequest[$i,2]}, result : ${data[$i]}"
     done
     echo "======================Result======================"
 }
@@ -467,15 +486,15 @@ function getDataGraph() {
     for i in $(seq 1 $nbLine); do
         echo $"# Getting data $i/$nbLine : ${dataRequest[$i,1]} ..."
         echo $((100 * $i / $nbLine))
-        echo $(${dataRequest[$i,2]}) >> $LOGFILE
+        eval ${dataRequest[$i,2]} >> $TMPBUFF # execute la commande
     done | yad --progress --percentage=0 --auto-close --on-top --title $"Getting data" --mouse
 
     local i=1
     while read line ; do
         data[$i]=$line
         i=$((i + 1))
-    done < $LOGFILE
-    echo -n "" > $LOGFILE
+    done < $TMPBUFF
+    echo -n "" > $TMPBUFF
 }
 
 function parseResponse() {
@@ -582,12 +601,7 @@ function showViewGraph() {
 
 function evaluation() {
     if [ $(ps aux |grep -c 'marionnet/kernels') = 1 ]; then
-        if [ $graph -eq 1 ]; then
-            yad --image emblem-important --title "Error" --text "No machine or routeur is running!" \
-            --button "ok" --on-top --mouse
-        else
-            echo_err $"No virtual machine or router is running !"
-        fi
+        echo_err $"No virtual machine or router is running !"
         exit 1
     fi
     [ $graph -eq 0 ] && echo $"Evaluation in progress ..."
@@ -698,5 +712,5 @@ else
     [ $graph -eq 1 ] && normalModeGraph || normalModeText
 fi
 
-rm -f $LOGFILE
+rm -rf $TMPVERIF
 perl -MFcntl -e 'fcntl STDIN, F_SETFL, fcntl(STDIN, F_GETFL, 0) & ~O_NONBLOCK'

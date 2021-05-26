@@ -143,6 +143,16 @@ getMask <machine> [interface]
 ```bash
 getMask m1
 ```
+### getCidrMask
+Affiche le mask (cidr) de la machine (par défaut : interface=eth0)
+* syntax
+```bash
+getCidrMask <machine> [interface]
+```
+* exemple
+```bash
+getCidrMask m1
+```
 ### getFullIP 
 Affiche l'ip et le mask cidr de machine (par défaut : interface=eth0)
 * syntax
@@ -151,7 +161,7 @@ getFullIP <machine> [interface]
 ```
 * exemple
 ```bash
-getMask m1
+getFullIP m1
 ```
 * format de l'affichage
 ```
