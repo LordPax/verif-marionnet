@@ -28,7 +28,7 @@ function validResponse(object $resp, string $value) : int {
     $valid = 0;
 
     if (isset($resp->regex)) // regex keyword
-        $valid = preg_match('/'.$resp->regex.'/', $value);
+        $valid = preg_match('%'.$resp->regex.'%', $value);
     else if (isset($resp->equal)) // equal keyword
         $valid = $resp->equal === $value ? 1 : 0;
     else // default keyword
