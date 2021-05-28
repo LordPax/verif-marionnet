@@ -1,11 +1,12 @@
 <?php
 require_once "include/config.php";
-// require_once "include/$cas_path/CAS.php";
-require_once "/usr/share/pear/CAS.php";
+// TODO : remetre comme c'était
+require_once "include/$cas_path/CAS.php";
+// require_once "/usr/share/pear/CAS.php";
 require_once "Models/Model.php";
 require_once "Controllers/Controller.php";
 
-$controllers = ['home'];
+$controllers = ['home', 'bareme'];
 $controller_default = 'home';
 
 if (isset($_GET['controller']) and in_array($_GET['controller'], $controllers)) {

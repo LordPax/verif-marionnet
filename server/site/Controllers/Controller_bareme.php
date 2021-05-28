@@ -1,5 +1,5 @@
 <?php
-class Controller_home extends Controller {
+class Controller_bareme extends Controller {
     public function __construct() {
         if (isset($_GET['action']) and method_exists($this, "action_" . $_GET["action"])) {
             $action = "action_" . $_GET["action"];
@@ -12,18 +12,10 @@ class Controller_home extends Controller {
     public function action_default() {
         require 'include/config.php';
         
-        // phpCAS::setDebug();
-        // phpCAS::setVerbose(true);
-
-        // phpCAS::client(CAS_VERSION_2_0, $cas_host, $cas_port, $cas_context, true);
-        // phpCAS::setNoCasServerValidation();
-        // phpCAS::forceAuthentication();
-
         $data = [
-            'title' => 'Home',
-            // 'name' => phpCAS::getUser()
+            'title' => 'Bareme editor',
         ];
-        $this->render('home', $data);
+        $this->render('bareme', $data);
     }
 }
 ?>
