@@ -511,6 +511,7 @@ function getDataGraph() {
     local i=1
     while read line ; do
         data[$i]=$line
+        echo_debug "$i : ${dataRequest[$i,1]} : ${dataRequest[$i,2]} : $line" err
         i=$((i + 1))
     done < $TMPBUFF
     echo -n "" > $TMPBUFF

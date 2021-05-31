@@ -11,11 +11,23 @@ class Controller_bareme extends Controller {
 
     public function action_default() {
         require 'include/config.php';
+        require 'include/utils.php';
         
         $data = [
             'title' => 'Bareme editor',
+            'request' => request_render(1, 1)
         ];
         $this->render('bareme', $data);
+    }
+
+    public function action_edit() {
+        require 'include/config.php';
+        
+        $data = [
+            'title' => 'Bareme editor',
+            'dump' => var_dump($_POST) 
+        ];
+        $this->render('test', $data);
     }
 }
 ?>

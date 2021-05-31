@@ -41,7 +41,7 @@ label {
     margin-right: auto;
 }
 
-button, select {
+.button, button, select {
     padding: 5px;
     border-radius: 2px;
 }
@@ -51,6 +51,12 @@ button, select {
     background-color: #6a8ce7;
     color: #FFF;
     float : right;
+}
+
+.sub-btn {
+    border: 1px solid #6a8ce7;
+    background-color: #6a8ce7;
+    color: #FFF;
 }
 
 .more-btn {
