@@ -2,7 +2,7 @@
 
 <section>
     <div class="bg">
-        <form action="?controller=bareme&action=edit" method="post">
+        <form action="?controller=bareme&action=create" method="post">
             <div class="field">
                 <!-- <label for="TP-name">nom du TP</label> -->
                 <input type="text" name="TP-name" id="TP-name" class="txt-field" placeholder="nom du TP">
@@ -16,7 +16,7 @@
                     <span class="section-name">Requetes</span>
                     <button class="add-btn add-request">ajouter requete</button>
                 </div>
-                <div class="section-content response">
+                <div class="section-content indent">
                     <?=$request?>
                 </div>
             </div>

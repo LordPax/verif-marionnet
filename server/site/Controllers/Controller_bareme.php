@@ -20,14 +20,23 @@ class Controller_bareme extends Controller {
         $this->render('bareme', $data);
     }
 
+    public function action_create() {
+        require 'include/config.php';
+        require 'include/utils.php';
+
+        if (checkData($_POST) == 0) {
+            $this->action_default();
+            // $this->render('test', [
+            //     'title' => 'Bareme editor',
+            //     'dump' =>  
+            // ]);
+        }
+        else
+            $this->action_error('il y a eu un problème');
+    }
+
     public function action_edit() {
         require 'include/config.php';
-        
-        $data = [
-            'title' => 'Bareme editor',
-            'dump' => var_dump($_POST) 
-        ];
-        $this->render('test', $data);
     }
 }
 ?>
