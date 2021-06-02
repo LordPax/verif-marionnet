@@ -40,4 +40,8 @@ $(() => {
             .append(data)
         })
     })
+
+    $('.msg-close').click(function(e) {
+        $(this).parent().hide()
+    })
 })

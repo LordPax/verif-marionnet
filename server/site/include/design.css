@@ -21,6 +21,38 @@ label {
     margin-left: 20px;
 }
 
+.msg-err {
+    background-color: #FFF;
+    border: 1px solid #ff4545;
+    border-radius: 3px;
+    color: #ff4545;
+    font-weight: 400;
+    font-size: 20px;
+    margin-top: 5px;
+}
+
+.msg-ok {
+    background-color: #FFF;
+    border: 1px solid #6a8ce7;
+    border-radius: 3px;
+    color: #6a8ce7;
+    font-weight: 400;
+    font-size: 20px;
+    margin-top: 5px;
+}
+
+.msg-content {
+    padding: 7px;
+    margin: 0;
+}
+
+.msg-close {
+    float: right;
+    background-color: #FFF;
+    color:#ff4545;
+    border: 0;
+}
+
 .section-header {
     padding-top: 7px;
     padding-bottom: 7px;

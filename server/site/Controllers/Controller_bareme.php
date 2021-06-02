@@ -23,16 +23,34 @@ class Controller_bareme extends Controller {
     public function action_create() {
         require 'include/config.php';
         require 'include/utils.php';
+        $data = [];
 
-        if (checkData($_POST) == 0) {
-            $this->action_default();
-            // $this->render('test', [
-            //     'title' => 'Bareme editor',
-            //     'dump' =>  
-            // ]);
+        if (isset($_POST['sub'])) {
+            if (($code = checkData($_POST)) == 0) {
+                // TODO : verif nom TP dans projectList et creation de .bareme
+                $data = [
+                    'title' => 'Bareme editor',
+                    'ok' => 'Le TP .bareme à été ajouté avec succès', 
+                    'request' => request_render(1, 1)
+                ];
+            }
+            else {
+                $data = [
+                    'title' => 'Bareme editor',
+                    'error' => 'Il y a eu un problème vers : '.$code,
+                    'request' => request_render(1, 1)
+                ];
+            }
         }
-        else
-            $this->action_error('il y a eu un problème');
+        else {
+            $data = [
+                'title' => 'Bareme editor',
+                'error' => 'Quelque chose s\'est mal passer',
+                'request' => request_render(1, 1)
+            ];
+        }
+
+        $this->render('bareme', $data);
     }
 
     public function action_edit() {

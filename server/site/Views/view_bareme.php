@@ -22,6 +22,24 @@
             </div>
             <input type="submit" name="sub" class="button sub-btn" value="envoyer">
         </form>
+        <div class="msg">
+            <?php if (isset($error)) { ?> 
+            <div class="msg-err">
+                <button class="msg-close">X</button>
+                <p class="msg-content">
+                    <?=$error?>
+                </p>
+            </div>
+            <?php }?>
+            <?php if (isset($ok)) { ?> 
+            <div class="msg-ok">
+                <button class="msg-close">X</button>
+                <p class="msg-content">
+                    <?=$ok?>
+                </p>
+            </div>
+            <?php }?>
+        </div>
     </div>
 </section>
 

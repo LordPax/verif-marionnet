@@ -1,5 +1,10 @@
 <?php
-function request_render(int $idReq, int $idRes) {
+
+function e(string $val):string {
+    return htmlspecialchars($val);
+}
+
+function request_render(int $idReq, int $idRes):string {
     return '<div class="section" data-idreq="'.$idReq.'">
     <div class="section-header">
         <span class="section-name">Requete '.$idReq.'</span>
@@ -30,7 +35,7 @@ function request_render(int $idReq, int $idRes) {
 </div>';
 }
 
-function response_render(int $idReq, int $idRes) {
+function response_render(int $idReq, int $idRes):string {
     return '<div class="section" data-idres="'.$idRes.'">
     <div class="section-header">
         <span class="section-name">Réponse '.$idRes.'</span>
@@ -58,7 +63,7 @@ function response_render(int $idReq, int $idRes) {
         </div>
         <div class="field">
             <label for="type">type</label>
-            <select name="type" id="req'.$idReq.'-res'.$idRes.'-type">
+            <select name="req'.$idReq.'-res'.$idRes.'-type" id="type">
                 <option value="good">good</option>
                 <option value="partial">partial</option>
                 <option value="wrong">wrong</option>
@@ -70,29 +75,62 @@ function response_render(int $idReq, int $idRes) {
 </div>';
 }
 
-// function condition($val) {
-//     return $k === 'TP-name' && $k === 'tolerance' && preg_match('/req[0-9]+-label/', $k)  
-// }
+function condition(string $val):bool {
+    return $val !== 'TP-name' && $val !== 'tolerance' && 
+    !preg_match('/req[0-9]+-(label|command|bareme)/', $val) && 
+    !preg_match('/req[0-9]+-res[0-9]+-(typeCompare|compare|comment|pts|type)/', $val); 
+}
 
-function checkData(array $data) {
+function checkData(array $data):string {
     $compare = ['equal', 'regex', 'default'];
     $type = ['good', 'partial', 'wrong', 'mandatoryGood', 'mandatoryWrong'];
+    unset($data['sub']);
+    $result = [];
+
     foreach ($data as $k => $v) {
-        if ($k === 'TP-name' && empty($v)) return 2;
-        else if ($k === 'tolerance' && !preg_match('/[0-9]+/', $v)) return 3;
-        else if (preg_match('/^req[0-9]+-label$/', $k) && empty($v)) return 4;
-        else if (preg_match('/^req[0-9]+-command$/', $k) && empty($v)) return 5;
-        else if (preg_match('/^req[0-9]+-bareme$/', $k) && !preg_match('/[0-9]+/', $v)) return 6;
-        else if (preg_match('/^req[0-9]+-res[0-9]+-typeCompare$/', $k) && !in_array($v, $compare)) return 7;
-        else if (preg_match('/^req[0-9]+-res[0-9]+-compare$/', $k) && empty($v)) return 8;
-        else if (preg_match('/^req[0-9]+-res[0-9]+-comment$/', $k) && empty($v)) return 9;
-        else if (preg_match('/^req[0-9]+-res[0-9]+-pts$/', $k) && empty($v)) return 10;
-        else if (preg_match('/^req[0-9]+-res[0-9]+-type$/', $k) && !in_array($v, $type)) return 11;
+        if ($k === 'TP-name' && empty($v)) return "2 $k $v";
+        else if ($k === 'tolerance' && !preg_match('/[0-9]+/', $v)) return "3 $k $v";
+        else if (preg_match('/^req[0-9]+-label$/', $k) && empty($v)) return "4 $k $v";
+        else if (preg_match('/^req[0-9]+-command$/', $k) && empty($v)) return "5 $k $v";
+        else if (preg_match('/^req[0-9]+-bareme$/', $k) && !preg_match('/[0-9]+/', $v)) return "6 $k $v";
+        else if (preg_match('/^req[0-9]+-res[0-9]+-typeCompare$/', $k) && !in_array($v, $compare)) return "7 $k $v";
+        else if (preg_match('/^req[0-9]+-res[0-9]+-compare$/', $k) && empty($v)) return "8 $k $v";
+        else if (preg_match('/^req[0-9]+-res[0-9]+-comment$/', $k) && empty($v)) return "9 $k $v";
+        else if (preg_match('/^req[0-9]+-res[0-9]+-pts$/', $k) && !preg_match('/[0-9]+/', $v)) return "10 $k $v";
+        else if (preg_match('/^req[0-9]+-res[0-9]+-type$/', $k) && !in_array($v, $type)) return "11 $k $v";
+        else if (condition($k)) return "1 $k $v";
+
+        // $result[$k] = e($v);
     }
-    return 0; // aucun probleme
+
+    return '0'; // aucun probleme
 }
 
-function parseData(array $data) {
+function data2json(array $data):string {
+    $json = ['tolerance' => $data['tolerance'], 'requests' => []];
+    $i = 1; $j = 1;
 
+    while (isset($data['req'.$i.'-label'])) {
+        array_push($json['requests'], [
+            'label' => $data['req'.$i.'-label'],
+            'command' => $data['req'.$i.'-command'],
+            'bareme' => $data['req'.$i.'-bareme'],
+            'responses' => []
+        ]);
+        while (isset($data['req'.$i.'-res'.$j.'-typeCompare'])) {
+            array_push($json['requests'][$i - 1]['responses'], [
+                $data['req'.$i.'-res'.$j.'-typeCompare'] => $data['req'.$i.'-res'.$j.'-compare'],
+                'comment' => $data['req'.$i.'-res'.$j.'-comment'],
+                'pts' => $data['req'.$i.'-res'.$j.'-pts'],
+                'type' => $data['req'.$i.'-res'.$j.'-type']
+            ]);
+            $j++;
+        }
+        $i++;
+        $j = 1;
+    }
+
+    return json_encode($json);
 }
+
 ?>
