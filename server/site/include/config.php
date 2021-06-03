@@ -4,8 +4,10 @@
 // $loginTemp = 'lordpax';
 // $passTemp = 'azerty';
 
-// $domain = 'http://localhost/server/site';
-$domain = 'http://www-info.iutv.univ-paris13.fr/~gauthier/site/';
+$racine = 'http://www-info.iutv.univ-paris13.fr/';
+// $racine = 'http://localhost/';
+$domain = $racine.'/~gauthier/site/';
+$projectListName = $racine.'/verifMario.d/.projectList';
 
 $cas_path='phpCAS-1.3.6';
 $cas_host='cas.univ-paris13.fr';

@@ -5,11 +5,11 @@
         <form action="?controller=bareme&action=create" method="post">
             <div class="field">
                 <!-- <label for="TP-name">nom du TP</label> -->
-                <input type="text" name="TP-name" id="TP-name" class="txt-field" placeholder="nom du TP">
+                <input value="<?php echo useIfExist($_POST, 'TP-name');?>"type="text" name="TP-name" id="TP-name" class="txt-field" placeholder="nom du TP">
             </div>
             <div class="field">
                 <!-- <label for="tolerance">tolerance</label> -->
-                <input type="number" name="tolerance" id="telorance" class="txt-field" placeholder="tolerance">
+                <input value="<?php echo useIfExist($_POST, 'tolerance');?>" type="number" name="tolerance" id="telorance" class="txt-field" placeholder="tolerance">
             </div>
             <div class="section event">
                 <div class="section-header">
