@@ -12,6 +12,7 @@ class Controller_bareme extends Controller {
     public function action_default() {
         require 'include/config.php';
         require 'include/utils.php';
+        require 'Views/pattern_request.php';
         
         $data = [
             'title' => 'Bareme editor',
