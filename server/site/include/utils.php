@@ -92,4 +92,18 @@ function data2json(array $data):string {
     return json_encode($json);
 }
 
+function extractRequestFromJson(string $data):string {
+    $json = json_decode($data);
+    $result = [];
+
+    foreach($json->requests as $k => $v) {
+        array_push($result, [
+            'label' => $v->label,
+            'command' => $v->command
+        ]);
+    }
+
+    return json_encode($result);
+}
+
 ?>

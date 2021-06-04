@@ -7,7 +7,10 @@
 $racine = 'http://www-info.iutv.univ-paris13.fr/';
 // $racine = 'http://localhost/';
 $domain = $racine.'/~gauthier/site/';
-$projectListName = $racine.'/verifMario.d/.projectList';
+$projectDir = '/srv/http/server/exo_de_test/';
+// $projectDir = '/var/www/html/verifMario.d/';
+// $projectDir2 = $racine.'/verifMario.d/';
+$projectListName = $projectDir.'/.projectList';
 
 $cas_path='phpCAS-1.3.6';
 $cas_host='cas.univ-paris13.fr';

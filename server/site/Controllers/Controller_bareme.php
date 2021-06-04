@@ -33,16 +33,31 @@ class Controller_bareme extends Controller {
             $resultCheck = checkData($_POST);
 
             if (gettype($resultCheck) === 'array') {
-                $projectList = explode(' ', file_get_contents($projectListName));
-                // echo var_dump($projectList);
-                if (!in_array($resultCheck['TP-name'], $projectList)) {
-                    // echo data2json($resultCheck);
+                $projectList = preg_split('/\s+/', file_get_contents($projectListName));
 
-                    $data = [
-                        'title' => 'Bareme editor',
-                        'ok' => 'Le TP .bareme à été ajouté avec succès', 
-                        'request' => request_render(1)
-                    ];
+                if (!in_array($resultCheck['TP-name'], $projectList)) {
+                    $bareme = data2json($resultCheck);
+                    $request = extractRequestFromJson($bareme);
+                    $projectName = $projectDir.'/'.$resultCheck['TP-name'];
+
+                    if (mkdir($projectName)) {
+                        file_put_contents($projectListName, $resultCheck['TP-name']."\n", FILE_APPEND);
+                        file_put_contents($projectName.'/'.'.bareme.json', $bareme);
+                        file_put_contents($projectName.'/'.'.requetes.json', $request);
+
+                        $data = [
+                            'title' => 'Bareme editor',
+                            'ok' => 'Le TP .bareme à été ajouté avec succès', 
+                            'request' => request_render(1)
+                        ];
+                    }
+                    else {
+                        $data = [
+                            'title' => 'Bareme editor',
+                            'error' => 'le TP n\'a pas pue être créé',
+                            'request' => generateRequest($_POST)
+                        ];
+                    }
                 }
                 else {
                     $data = [
