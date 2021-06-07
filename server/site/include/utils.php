@@ -12,6 +12,12 @@ function select(array $data, string $key, string $comp): string {
     return useIfExist($data, $key) === $comp ? 'selected' : '';
 }
 
+/**
+ * Générère des requetes dans le formalaire
+ * 
+ * @param data les données reçu
+ * @return string rendu html des requetes
+ */
 function generateRequest(array $data = []):string {
     $i = 1;
     $render = '';
@@ -23,6 +29,13 @@ function generateRequest(array $data = []):string {
     return $render;
 }
 
+
+/**
+ * Générère responses dans le formalaire
+ * 
+ * @param data les données reçus
+ * @return string rendu html des responses 
+ */
 function generateResponse(int $idReq, array $data = []):string {
     $i = 1;
     $render = '';
@@ -34,12 +47,24 @@ function generateResponse(int $idReq, array $data = []):string {
     return $render;
 }
 
+/**
+ * Condition qui vérifie la validité d'une clée du formulaire
+ * 
+ * @param val clé du formulaire
+ * @return bool 
+ */
 function condition(string $val):bool {
     return $val !== 'TP-name' && $val !== 'tolerance' && 
     !preg_match('/req[0-9]+-(label|command|bareme)/', $val) && 
     !preg_match('/req[0-9]+-res[0-9]+-(typeCompare|compare|comment|pts|type)/', $val); 
 }
 
+/**
+ * Fonction qui vérifie les valeur envyer par le formulaire
+ * 
+ * @param data valeur envoyées par le formulaire 
+ * @return string|array tableau de valeur verifié 
+ */
 function checkData(array $data):string|array {
     $compare = ['equal', 'regex', 'default'];
     $type = ['good', 'partial', 'wrong', 'mandatoryGood', 'mandatoryWrong'];
@@ -65,6 +90,12 @@ function checkData(array $data):string|array {
     return $result; // aucun probleme
 }
 
+/**
+ * Fonction qui convertie les données reçus dans un format json
+ * 
+ * @param data
+ * @return string json 
+ */
 function data2json(array $data):string {
     $json = ['tolerance' => $data['tolerance'], 'requests' => []];
     $i = 1; $j = 1;
@@ -92,6 +123,44 @@ function data2json(array $data):string {
     return json_encode($json);
 }
 
+function searchCompare(object $elem):array {
+    if (isset($elem->equal)) return ['equal', $elem->equal];
+    else if (isset($elem->regex)) return ['regex', $elem->regex];
+    else return ['default', $elem->default];
+}
+
+/**
+ * Fait exactement le contraire de la fonction data2json
+ */
+function json2data(string $data):array {
+    $json = json_decode($data);
+    $result = ['tolerance' => $json->tolerance];
+    $i = 1; $j = 1;
+    $compare = null;
+
+    foreach ($json->requests as $vReq) {
+        $result['req'.$i.'-label'] = $vReq->label;
+        $result['req'.$i.'-command'] = $vReq->command;
+        $result['req'.$i.'-bareme'] = $vReq->bareme;
+        foreach ($vReq->responses as $vRes) {
+            $compare = searchCompare($vRes);
+            $result['req'.$i.'-res'.$j.'-typeCompare'] = $compare[0];
+            $result['req'.$i.'-res'.$j.'-compare'] = $compare[1];
+            $result['req'.$i.'-res'.$j.'-comment'] = $vRes->comment;
+            $result['req'.$i.'-res'.$j.'-pts'] = $vRes->pts;
+            $result['req'.$i.'-res'.$j.'-type'] = $vRes->type;
+            $j++;
+        }
+        $i++;
+        $j = 1;
+    }
+
+    return $result;
+}
+
+/**
+ * Fonction qui extrait les propriétés label et command du fichier .bareme.json
+ */
 function extractRequestFromJson(string $data):string {
     $json = json_decode($data);
     $result = [];

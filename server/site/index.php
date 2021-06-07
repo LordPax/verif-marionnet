@@ -1,5 +1,8 @@
 <?php
-require_once "include/config.php";
+// require_once 'include/config.php';
+// require_once 'include/utils.php';
+// require_once 'Views/pattern_request.php';
+
 // TODO : remetre comme c'était
 // require_once "include/$cas_path/CAS.php";
 // require_once "/usr/share/pear/CAS.php";

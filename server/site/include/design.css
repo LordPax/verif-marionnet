@@ -85,6 +85,7 @@ label {
 }
 
 .sub-btn {
+    margin-top: 5px;
     border: 1px solid #6a8ce7;
     background-color: #6a8ce7;
     color: #FFF;

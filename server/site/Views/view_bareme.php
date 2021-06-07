@@ -2,7 +2,7 @@
 
 <section>
     <div class="bg">
-        <form action="?controller=bareme&action=create" method="post">
+        <form action="?controller=bareme&action=create" method="post" enctype="multipart/form-data">
             <div class="field">
                 <!-- <label for="TP-name">nom du TP</label> -->
                 <input value="<?php echo useIfExist($_POST, 'TP-name');?>"type="text" name="TP-name" id="TP-name" class="txt-field" placeholder="nom du TP">
@@ -10,6 +10,10 @@
             <div class="field">
                 <!-- <label for="tolerance">tolerance</label> -->
                 <input value="<?php echo useIfExist($_POST, 'tolerance');?>" type="number" name="tolerance" id="telorance" class="txt-field" placeholder="tolerance">
+            </div>
+            <div class="field">
+                <label for="file">upload le fichier .mar</label>
+                <input type="file" name="file" id="file">
             </div>
             <div class="section event">
                 <div class="section-header">
