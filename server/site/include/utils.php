@@ -4,8 +4,11 @@ function e(string $val):string {
     return htmlspecialchars($val);
 }
 
-function useIfExist(array $data, string $key):string {
-    return isset($data[$key]) ? $data[$key] : '';
+function useIfExist(mixed $data, string $key = null):string {
+    if ($key !== null)
+        return isset($data[$key]) ? $data[$key] : '';
+    else
+        return isset($data) ? $data : '';
 }
 
 function select(array $data, string $key, string $comp): string {

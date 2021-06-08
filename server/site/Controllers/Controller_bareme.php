@@ -10,107 +10,47 @@ class Controller_bareme extends Controller {
     }
 
     public function action_default() {
+        // header('Location: '.$domain.'?controller=bareme&action=formCreate');
+        $this->render('choice', [
+            'title' => 'choix'
+        ]);
+    }
+
+    public function action_formCreate(array $prevData = null) {
         require_once 'include/config.php';
         require_once 'include/utils.php';
         require_once 'Views/pattern_request.php';
         
         $data = [
             'title' => 'Bareme editor',
+            'form' => '?controller=bareme&action=create',
             'request' => request_render(1)
         ];
+        if (isset($prevData['error'])) $data['error'] = $prevData['error'];
         $this->render('bareme', $data);
     }
 
     public function action_create() {
-        require_once 'include/config.php';
-        require_once 'include/utils.php';
-        require_once 'Views/pattern_request.php';
-        $data = [];
-        $projectList = [];
-        $resultCheck = null;
-
-        if (isset($_POST['sub'])) {
-            $resultCheck = checkData($_POST);
-
-            if (preg_match('/^[A-Za-z0-9\-_]+\.mar$/', $_FILES['file']['name'])) {
-
-                if (gettype($resultCheck) === 'array') {
-                    $projectList = preg_split('/\s+/', file_get_contents($projectListName));
-
-                    if (!in_array($resultCheck['TP-name'], $projectList)) {
-                        $bareme = data2json($resultCheck);
-                        $request = extractRequestFromJson($bareme);
-                        $projectName = $projectDir.'/'.$resultCheck['TP-name'].'/';
-
-                        if (mkdir($projectName)) {
-                            file_put_contents($projectListName, $resultCheck['TP-name']."\n", FILE_APPEND);
-                            file_put_contents($projectName.'/.bareme.json', $bareme);
-                            file_put_contents($projectName.'/.requetes.json', $request);
-                            move_uploaded_file($_FILES['file']['tmp_name'], $projectName.'/'.$resultCheck['TP-name'].'.mar');
-                            copy($idSsh, $projectName.'/.id_rsa_marionnet');
-
-                            $data = [
-                                'title' => 'Bareme editor',
-                                'ok' => 'Le TP .bareme à été ajouté avec succès', 
-                                'request' => request_render(1)
-                            ];
-                        }
-                        else {
-                            $data = [
-                                'title' => 'Bareme editor',
-                                'error' => 'le TP n\'a pas pue être créé',
-                                'request' => generateRequest($_POST)
-                            ];
-                        }
-                    }
-                    else {
-                        $data = [
-                            'title' => 'Bareme editor',
-                            'error' => 'Le TP '.$resultCheck['TP-name'].' existe déjà',
-                            'request' => generateRequest($_POST)
-                        ];
-                    }
-                }
-                else {
-                    $data = [
-                        'title' => 'Bareme editor',
-                        'error' => 'Il y a eu un problème vers : '.$resultCheck,
-                        'request' => generateRequest($_POST)
-                    ];
-                }
-            }
-            else {
-                $data = [
-                    'title' => 'Bareme editor',
-                    'error' => 'Le format du fichier ne correspond pas',
-                    'request' => generateRequest($_POST)
-                ];
-            }
-        }
-        else {
-            $data = [
-                'title' => 'Bareme editor',
-                // 'error' => 'Quelque chose s\'est mal passer',
-                'request' => request_render(1)
-            ];
-        }
-
-        $this->render('bareme', $data);
+        $this->upload(false); // false pour create
     }
 
-    public function action_edit() {
+    public function action_formEdit(array $prevData = null) {
         require_once 'include/config.php';
         require_once 'include/utils.php';
         require_once 'Views/pattern_request.php';
+        $projectList = [];
 
         if (isset($_GET['tpName'])) {
             $tpName = e($_GET['tpName']);
-            $tmpFile = file_get_contents($projectDir.'/'.$tpName.'/.bareme.json');
+            $projectList = preg_split('/\s+/', file_get_contents($projectListName));
             
-            if (!empty($tmpFile) && $tmpFile !== false) {
-                $data = json2data($tmpFile);
+            if (in_array($tpName, $projectList)) {
+                $data = json2data(file_get_contents($projectDir.'/'.$tpName.'/.bareme.json'));
                 $this->render('bareme', [
                     'title' => 'Bareme editor',
+                    'form' => '?controller=bareme&action=edit',
+                    'TPname' => $tpName,
+                    'tolerance' => $data['tolerance'],
                     'request' => generateRequest($data)
                 ]);
             }
@@ -121,6 +61,103 @@ class Controller_bareme extends Controller {
         else {
             header('Location: '.$domain.'?controller=bareme');
         }
+    }
+
+    public function action_edit() {
+        $this->upload(true); // true pour edit
+    }
+
+    /**
+     * @param mode false pour mode create et true pour mode edit
+     */
+    private function upload(bool $mode) {
+        require_once 'include/config.php';
+        require_once 'include/utils.php';
+        require_once 'Views/pattern_request.php';
+        $data = [];
+        $projectList = [];
+        $resultCheck = null;
+
+        if (isset($_POST['sub'])) {
+            if (preg_match('/^[A-Za-z0-9\-_]+\.mar$/', $_FILES['file']['name'])) {
+                $resultCheck = checkData($_POST);
+
+                if (gettype($resultCheck) === 'array') {
+                    $projectList = preg_split('/\s+/', file_get_contents($projectListName));
+
+                    if (in_array($resultCheck['TP-name'], $projectList) === $mode) {
+                        $bareme = data2json($resultCheck);
+                        $request = extractRequestFromJson($bareme);
+                        $projectName = $projectDir.'/'.$resultCheck['TP-name'].'/';
+
+                        if (!is_dir($projectName)) mkdir($projectName);
+
+                        if (is_dir($projectName)) {
+                            file_put_contents($projectListName, $resultCheck['TP-name']."\n", FILE_APPEND);
+                            file_put_contents($projectName.'/.bareme.json', $bareme);
+                            file_put_contents($projectName.'/.requetes.json', $request);
+                            move_uploaded_file($_FILES['file']['tmp_name'], $projectName.'/'.$resultCheck['TP-name'].'.mar');
+                            copy($idSsh, $projectName.'/.id_rsa_marionnet');
+
+                            $ok = $mode ? 'Le TP .bareme à été modifié avec succès' : 'Le TP .bareme à été ajouté avec succès'; 
+                            $form = '?controller=bareme&action=create';
+                            $data = [
+                                'ok' => $ok,
+                                'request' => request_render(1)
+                            ];
+                        }
+                        else {
+                            $form = $mode ? '?controller=bareme&action=edit' : '?controller=bareme&action=create';
+                            $data = [
+                                'error' => 'le TP n\'a pas pue être créé',
+                                'TPname' => $_POST['TP-name'],
+                                'tolerance' => $_POST['tolerance'],
+                                'request' => generateRequest($_POST)
+                            ];
+                        }
+                    }
+                    else {
+                        $error = $mode ? 'Le TP '.$resultCheck['TP-name'].' n\'existe pas' : 'Le TP '.$resultCheck['TP-name'].' existe déjà'; 
+                        $form = $mode ? '?controller=bareme&action=edit' : '?controller=bareme&action=create';
+                        $data = [
+                            'error' => $error,
+                            'TPname' => $_POST['TP-name'],
+                            'tolerance' => $_POST['tolerance'],
+                            'request' => generateRequest($_POST)
+                        ];
+                    }
+                }
+                else {
+                    $form = $mode ? '?controller=bareme&action=edit' : '?controller=bareme&action=create';
+                    $data = [
+                        'error' => 'Il y a eu un problème vers : '.$resultCheck,
+                        'TPname' => $_POST['TP-name'],
+                        'tolerance' => $_POST['tolerance'],
+                        'request' => generateRequest($_POST)
+                    ];
+                }
+            }
+            else {
+                $form = $mode ? '?controller=bareme&action=edit' : '?controller=bareme&action=create';
+                $data = [
+                    'error' => 'Le format du fichier .mar ne correspond pas',
+                    'TPname' => $_POST['TP-name'],
+                    'tolerance' => $_POST['tolerance'],
+                    'request' => generateRequest($_POST)
+                ];
+            }
+        }
+        else {
+            $form = $mode ? '?controller=bareme&action=edit' : '?controller=bareme&action=create';
+            $data = [
+                'request' => request_render(1)
+            ];
+        }
+
+        $data['title'] = 'Bareme editor';
+        $data['form'] = $form;
+
+        $this->render('bareme', $data);
     }
 }
 ?>
