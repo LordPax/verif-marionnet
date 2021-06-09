@@ -9,7 +9,12 @@
         <form action="?controller=bareme&action=formEdit" method="get">
             <input type="hidden" name="controller" value="bareme">
             <input type="hidden" name="action" value="formEdit">
-            <input type="text" name="tpName" class="txt-field" placeholder="Nom du TP">
+            <!-- <input type="text" name="tpName" class="txt-field" placeholder="Nom du TP"> -->
+            <select name="tpName" id="tpName">
+                <?php foreach ($projectList as $v):?>
+                    <option value="<?=$v?>"><?=$v?></option>
+                <?php endforeach;?>
+            </select>
             <input type="submit" class="button sub-btn" value="Modifier ce TP">
         </form>
     </div>

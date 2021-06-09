@@ -3,6 +3,7 @@ function request_render(int $idReq, array $data = []):string {
     return '<div class="section request" data-idreq="'.$idReq.'">
         <div class="section-header">
             <span class="section-name">Requete '.$idReq.'</span>
+            <button class="suppr-btn">X</button>
             <button class="more-btn">V</button>
         </div>
         <div class="section-content">
@@ -34,6 +35,7 @@ function response_render(int $idReq, int $idRes, array $data = []):string {
     return '<div class="section response" data-idres="'.$idRes.'">
         <div class="section-header">
             <span class="section-name">Réponse '.$idRes.'</span>
+            <button class="suppr-btn">X</button>
             <button class="more-btn">V</button>
         </div>
         <div class="section-content">

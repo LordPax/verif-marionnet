@@ -3,23 +3,26 @@
 <section>
     <div class="bg">
         <div class="msg">
-            <?php if (isset($error)) { ?> 
+            <?php if (isset($error)) : ?> 
             <div class="msg-err">
                 <button class="msg-close">X</button>
                 <p class="msg-content">
                     <?=$error?>
                 </p>
             </div>
-            <?php }?>
-            <?php if (isset($ok)) { ?> 
+            <?php endif;?>
+            <?php if (isset($ok)) : ?> 
             <div class="msg-ok">
                 <button class="msg-close">X</button>
                 <p class="msg-content">
                     <?=$ok?>
                 </p>
             </div>
-            <?php }?>
+            <?php endif;?>
         </div>
+        <a href="?controller=bareme">
+            <button class="add-btn">Retour</button>
+        </a>
         <form action="<?=$form?>" method="post" enctype="multipart/form-data">
             <div class="field">
                 <!-- <label for="TP-name">nom du TP</label> -->

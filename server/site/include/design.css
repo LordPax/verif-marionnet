@@ -91,11 +91,12 @@ label {
     color: #FFF;
 }
 
-.more-btn {
+.more-btn, .suppr-btn {
     border: 1px solid #A7A7A7;
     background-color: #FFF;
     color: #333;
     float : right;
+    margin-left: 5px;
 }
 
 select {
@@ -117,7 +118,7 @@ select {
     /* border-radius: 3px; */
 }
 .combined {
-    width : 85%;
+    width : 80%;
     float : right;
 }
 

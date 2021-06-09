@@ -11,8 +11,15 @@ class Controller_bareme extends Controller {
 
     public function action_default() {
         // header('Location: '.$domain.'?controller=bareme&action=formCreate');
+        require_once 'include/config.php';
+        require_once 'include/utils.php';
+        require_once 'Views/pattern_request.php';
+
+        $projectList = preg_split('/\s+/', file_get_contents($projectListName));
+
         $this->render('choice', [
-            'title' => 'choix'
+            'title' => 'Menu',
+            'projectList' => $projectList
         ]);
     }
 
@@ -93,7 +100,8 @@ class Controller_bareme extends Controller {
                         if (!is_dir($projectName)) mkdir($projectName);
 
                         if (is_dir($projectName)) {
-                            file_put_contents($projectListName, $resultCheck['TP-name']."\n", FILE_APPEND);
+                            if (!$mode)
+                                file_put_contents($projectListName, $resultCheck['TP-name']."\n", FILE_APPEND);
                             file_put_contents($projectName.'/.bareme.json', $bareme);
                             file_put_contents($projectName.'/.requetes.json', $request);
                             move_uploaded_file($_FILES['file']['tmp_name'], $projectName.'/'.$resultCheck['TP-name'].'.mar');

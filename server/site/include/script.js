@@ -9,6 +9,11 @@ $(() => {
         $(this).parent().parent().children('.section-content').toggle()
     })
 
+    $('.event').on('mousedown', '.suppr-btn', function(e) {
+        this.addEventListener('click', event => event.preventDefault())
+        $(this).parent().parent().remove()
+    })
+
     $('.add-request').click(function(e) {
         e.preventDefault()
         const idReq = $('.request').length + 1

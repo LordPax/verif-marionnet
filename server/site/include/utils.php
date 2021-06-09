@@ -22,13 +22,21 @@ function select(array $data, string $key, string $comp): string {
  * @return string rendu html des requetes
  */
 function generateRequest(array $data = []):string {
-    $i = 1;
+    // $i = 1;
     $render = '';
-    do {
-        $render .= '<hr/>';
-        $render .= request_render($i, $data);
-        $i++;
-    } while (isset($data['req'.$i.'-label']));
+    $nbReq = count(searchTab('/^req[0-9]+-label$/', array_keys($data)));
+
+    // do {
+    for ($i = 1; $i <= $nbReq; $i++) {
+        if (isset($data['req'.$i.'-label'])) {
+            $render .= '<hr/>';
+            $render .= request_render($i, $data);
+        }
+        else
+            $nbReq++;
+        // $i++;
+    }
+    // } while (isset($data['req'.$i.'-label']));
     return $render;
 }
 
@@ -40,13 +48,20 @@ function generateRequest(array $data = []):string {
  * @return string rendu html des responses 
  */
 function generateResponse(int $idReq, array $data = []):string {
-    $i = 1;
+    // $i = 1;
     $render = '';
-    do {
-        $render .= '<hr/>';
-        $render .= response_render($idReq, $i, $data);
-        $i++;
-    } while (isset($data['req'.$idReq.'-res'.$i.'-typeCompare']));
+    $nbRes = count(searchTab('/^req'.$idReq.'-res[0-9]+-typeCompare$/', array_keys($data)));
+    // do {
+    for ($i = 1; $i <= $nbRes; $i++) {
+        if (isset($data['req'.$idReq.'-res'.$i.'-typeCompare'])) {
+            $render .= '<hr/>';
+            $render .= response_render($idReq, $i, $data);
+        }
+        else
+            $nbRes++;
+        // $i++;
+    }
+    // } while (isset($data['req'.$idReq.'-res'.$i.'-typeCompare']));
     return $render;
 }
 
@@ -101,29 +116,54 @@ function checkData(array $data):string|array {
  */
 function data2json(array $data):string {
     $json = ['tolerance' => $data['tolerance'], 'requests' => []];
-    $i = 1; $j = 1;
-
-    while (isset($data['req'.$i.'-label'])) {
-        array_push($json['requests'], [
-            'label' => $data['req'.$i.'-label'],
-            'command' => $data['req'.$i.'-command'],
-            'bareme' => $data['req'.$i.'-bareme'],
-            'responses' => []
-        ]);
-        while (isset($data['req'.$i.'-res'.$j.'-typeCompare'])) {
-            array_push($json['requests'][$i - 1]['responses'], [
-                $data['req'.$i.'-res'.$j.'-typeCompare'] => $data['req'.$i.'-res'.$j.'-compare'],
-                'comment' => $data['req'.$i.'-res'.$j.'-comment'],
-                'pts' => $data['req'.$i.'-res'.$j.'-pts'],
-                'type' => $data['req'.$i.'-res'.$j.'-type']
+    // $i = 1; 
+    // $j = 1;
+    $tmp = 0;
+    $nbReq = count(searchTab('/^req[0-9]+-label$/', array_keys($data)));
+    $nbRes = 0; 
+    // while (isset($data['req'.$i.'-label'])) {
+    // echo var_export($data);
+    for ($i = 1; $i <= $nbReq + $tmp; $i++) {
+        if (isset($data['req'.$i.'-label'])) {
+            $nbRes = count(searchTab('/^req'.$i.'-res[0-9]+-typeCompare$/', array_keys($data)));
+            array_push($json['requests'], [
+                'label' => $data['req'.$i.'-label'],
+                'command' => $data['req'.$i.'-command'],
+                'bareme' => $data['req'.$i.'-bareme'],
+                'responses' => []
             ]);
-            $j++;
+            // while (isset($data['req'.$i.'-res'.$j.'-typeCompare'])) {
+            for ($j = 1; $j <= $nbRes; $j++) {
+                if (isset($data['req'.$i.'-res'.$j.'-typeCompare'])) {
+                    array_push($json['requests'][($i - 1) - $tmp]['responses'], [
+                        $data['req'.$i.'-res'.$j.'-typeCompare'] => $data['req'.$i.'-res'.$j.'-compare'],
+                        'comment' => $data['req'.$i.'-res'.$j.'-comment'],
+                        'pts' => $data['req'.$i.'-res'.$j.'-pts'],
+                        'type' => $data['req'.$i.'-res'.$j.'-type']
+                    ]);
+                }
+                else
+                    $nbRes++;
+                // $j++;
+            }
         }
-        $i++;
-        $j = 1;
+        else
+            $tmp++;
+        // $i++;
+        // $j = 1;
     }
 
+    // echo var_export($json);
     return json_encode($json);
+}
+
+function searchTab(string $regex, array $data):array {
+    $result = [];
+    foreach ($data as $v) {
+        if (preg_match($regex, $v))
+            array_push($result, $v);
+    }
+    return $result;
 }
 
 function searchCompare(object $elem):array {
