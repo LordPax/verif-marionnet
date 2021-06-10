@@ -16,7 +16,7 @@ function request_render(int $idReq, array $data = []):string {
                 <input type="text" name="req'.$idReq.'-command" id="command" class="txt-field" placeholder = "commande" value="'.useIfExist($data, 'req'.$idReq.'-command').'">
             </div>
             <div class="field">
-                <input type="number" name="req'.$idReq.'-bareme" id="bareme" class="txt-field" placeholder = "bareme" value="'.useIfExist($data, 'req'.$idReq.'-bareme').'">
+                <input type="text" name="req'.$idReq.'-bareme" id="bareme" class="txt-field" placeholder = "bareme (nombre)" value="'.useIfExist($data, 'req'.$idReq.'-bareme').'">
             </div>
             <div class="section">
                 <div class="section-header">
@@ -56,7 +56,7 @@ function response_render(int $idReq, int $idRes, array $data = []):string {
             </div>
             <div class="field">
                 <!-- <label for="pts">pts</label> -->
-                <input value="'.useIfExist($data, 'req'.$idReq.'-res'.$idRes.'-pts').'" type="number" name="req'.$idReq.'-res'.$idRes.'-pts" id="pts" class="txt-field" placeholder = "points">
+                <input value="'.useIfExist($data, 'req'.$idReq.'-res'.$idRes.'-pts').'" type="text" name="req'.$idReq.'-res'.$idRes.'-pts" id="pts" class="txt-field" placeholder = "points (nombre)">
             </div>
             <div class="field">
                 <label for="type">type</label>
@@ -64,6 +64,7 @@ function response_render(int $idReq, int $idRes, array $data = []):string {
                     <option value="good" '.select($data, 'req'.$idReq.'-res'.$idRes.'-type', 'good').'>good</option>
                     <option value="partial" '.select($data, 'req'.$idReq.'-res'.$idRes.'-type', 'partial').'>partial</option>
                     <option value="wrong" '.select($data, 'req'.$idReq.'-res'.$idRes.'-type', 'wrong').'>wrong</option>
+                    <option value="info" '.select($data, 'req'.$idReq.'-res'.$idRes.'-type', 'info').'>info</option>
                     <option value="mandatoryGood" '.select($data, 'req'.$idReq.'-res'.$idRes.'-type', 'mandatoryGood').'>mandatoryGood</option>
                     <option value="mandatoryWrong" '.select($data, 'req'.$idReq.'-res'.$idRes.'-type', 'mandatoryWrong').'>mandatoryWrong</option>
                 </select>

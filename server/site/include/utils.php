@@ -4,7 +4,7 @@ function e(string $val):string {
     return htmlspecialchars($val);
 }
 
-function useIfExist(mixed $data, string $key = null):string {
+function useIfExist($data, string $key = null):string {
     if ($key !== null)
         return isset($data[$key]) ? $data[$key] : '';
     else
@@ -71,9 +71,9 @@ function condition(string $val):bool {
  * @param data valeur envoyées par le formulaire 
  * @return string|array tableau de valeur vérifié 
  */
-function checkData(array $data):string|array {
+function checkData(array $data) {
     $compare = ['equal', 'regex', 'default'];
-    $type = ['good', 'partial', 'wrong', 'mandatoryGood', 'mandatoryWrong'];
+    $type = ['good', 'partial', 'wrong', 'info', 'mandatoryGood', 'mandatoryWrong'];
     unset($data['sub']);
     $result = [];
 

@@ -1,7 +1,8 @@
 // let idReq = 1
 // let idTabRes = [1]
 // const domain = 'http://www-info.iutv.univ-paris13.fr/~gauthier/site' 
-const domain = 'http://localhost/server/site' 
+const domain = 'http://www-info.iutv.univ-paris13.fr/verifMario.d/site' 
+// const domain = 'http://localhost/server/site' 
 
 $(() => {
     $('.event').on('mousedown', '.more-btn', function(e) {

@@ -30,7 +30,7 @@
             </div>
             <div class="field">
                 <!-- <label for="tolerance">tolerance</label> -->
-                <input value="<?= isset($tolerance) ? $tolerance : ''?>" type="number" name="tolerance" id="telorance" class="txt-field" placeholder="tolerance">
+                <input value="<?= isset($tolerance) ? $tolerance : ''?>" type="text" name="tolerance" id="telorance" class="txt-field" placeholder="tolerance (tolerance)">
             </div>
             <div class="field">
                 <label for="file">upload le fichier .mar</label>

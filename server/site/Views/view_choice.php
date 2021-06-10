@@ -2,6 +2,9 @@
 
 <section>
     <div class="bg">
+        <a href="include/disconnect.php">
+            <button class="add-btn">Se déconnecter</button>
+        </a>
         <a href="?controller=bareme&action=formCreate">
             <button class="sub-btn">Créer un TP</button>
         </a>
