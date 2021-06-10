@@ -21,6 +21,14 @@ label {
     margin-left: 20px;
 }
 
+.request, .response {
+    /* border : 1px solide #555555; */
+    /* background-color: #efefef; */
+    margin-top : 10px;
+    border-left: 2px solid #A7A7A7;
+    padding-left: 5px;
+}
+
 .msg-err {
     background-color: #FFF;
     border: 1px solid #ff4545;
@@ -97,6 +105,7 @@ label {
     color: #333;
     float : right;
     margin-left: 5px;
+    margin-top: -5px;
 }
 
 select {

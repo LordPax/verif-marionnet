@@ -16,52 +16,40 @@ function select(array $data, string $key, string $comp): string {
 }
 
 /**
- * Générère des requetes dans le formalaire
+ * Génère des requêtes dans le formulaire
  * 
  * @param data les données reçu
- * @return string rendu html des requetes
+ * @return string rendu html des requêtes
  */
 function generateRequest(array $data = []):string {
-    // $i = 1;
     $render = '';
     $nbReq = count(searchTab('/^req[0-9]+-label$/', array_keys($data)));
 
-    // do {
     for ($i = 1; $i <= $nbReq; $i++) {
-        if (isset($data['req'.$i.'-label'])) {
-            $render .= '<hr/>';
+        if (isset($data['req'.$i.'-label'])) 
             $render .= request_render($i, $data);
-        }
         else
             $nbReq++;
-        // $i++;
     }
-    // } while (isset($data['req'.$i.'-label']));
     return $render;
 }
 
 
 /**
- * Générère responses dans le formalaire
+ * Génère des réponses dans le formulaire
  * 
  * @param data les données reçus
  * @return string rendu html des responses 
  */
 function generateResponse(int $idReq, array $data = []):string {
-    // $i = 1;
     $render = '';
     $nbRes = count(searchTab('/^req'.$idReq.'-res[0-9]+-typeCompare$/', array_keys($data)));
-    // do {
     for ($i = 1; $i <= $nbRes; $i++) {
-        if (isset($data['req'.$idReq.'-res'.$i.'-typeCompare'])) {
-            $render .= '<hr/>';
+        if (isset($data['req'.$idReq.'-res'.$i.'-typeCompare']))
             $render .= response_render($idReq, $i, $data);
-        }
         else
             $nbRes++;
-        // $i++;
     }
-    // } while (isset($data['req'.$idReq.'-res'.$i.'-typeCompare']));
     return $render;
 }
 
@@ -78,10 +66,10 @@ function condition(string $val):bool {
 }
 
 /**
- * Fonction qui vérifie les valeur envyer par le formulaire
+ * Fonction qui vérifie les valeur envoyées par le formulaire
  * 
  * @param data valeur envoyées par le formulaire 
- * @return string|array tableau de valeur verifié 
+ * @return string|array tableau de valeur vérifié 
  */
 function checkData(array $data):string|array {
     $compare = ['equal', 'regex', 'default'];
@@ -105,7 +93,7 @@ function checkData(array $data):string|array {
         $result[$k] = e($v);
     }
 
-    return $result; // aucun probleme
+    return $result; // aucun problème
 }
 
 /**
@@ -116,13 +104,8 @@ function checkData(array $data):string|array {
  */
 function data2json(array $data):string {
     $json = ['tolerance' => $data['tolerance'], 'requests' => []];
-    // $i = 1; 
-    // $j = 1;
-    $tmp = 0;
     $nbReq = count(searchTab('/^req[0-9]+-label$/', array_keys($data)));
-    $nbRes = 0; 
-    // while (isset($data['req'.$i.'-label'])) {
-    // echo var_export($data);
+    $nbRes = 0; $tmp = 0;
     for ($i = 1; $i <= $nbReq + $tmp; $i++) {
         if (isset($data['req'.$i.'-label'])) {
             $nbRes = count(searchTab('/^req'.$i.'-res[0-9]+-typeCompare$/', array_keys($data)));
@@ -132,7 +115,6 @@ function data2json(array $data):string {
                 'bareme' => $data['req'.$i.'-bareme'],
                 'responses' => []
             ]);
-            // while (isset($data['req'.$i.'-res'.$j.'-typeCompare'])) {
             for ($j = 1; $j <= $nbRes; $j++) {
                 if (isset($data['req'.$i.'-res'.$j.'-typeCompare'])) {
                     array_push($json['requests'][($i - 1) - $tmp]['responses'], [
@@ -144,16 +126,12 @@ function data2json(array $data):string {
                 }
                 else
                     $nbRes++;
-                // $j++;
             }
         }
         else
             $tmp++;
-        // $i++;
-        // $j = 1;
     }
 
-    // echo var_export($json);
     return json_encode($json);
 }
 

@@ -8,7 +8,6 @@ if (!empty($_POST['type']) && $_POST['type'] == 'req' && !empty($_POST['idReq'])
     $type = htmlspecialchars($_POST['type']);
     $idReq = htmlspecialchars($_POST['idReq']);
 
-    echo '<hr/>';
     echo request_render($idReq);
 }
 
@@ -17,7 +16,6 @@ if (!empty($_POST['type']) && $_POST['type'] == 'res' && !empty($_POST['idReq'])
     $idReq = htmlspecialchars($_POST['idReq']);
     $idRes = htmlspecialchars($_POST['idRes']);
 
-    echo '<hr/>';
     echo response_render($idReq, $idRes);
 }
 ?>

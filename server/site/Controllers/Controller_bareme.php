@@ -51,7 +51,7 @@ class Controller_bareme extends Controller {
             $tpName = e($_GET['tpName']);
             $projectList = preg_split('/\s+/', file_get_contents($projectListName));
             
-            if (in_array($tpName, $projectList)) {
+            if (in_array($tpName, $projectList) && $tpName !== '') {
                 $data = json2data(file_get_contents($projectDir.'/'.$tpName.'/.bareme.json'));
                 $this->render('bareme', [
                     'title' => 'Bareme editor',
@@ -86,6 +86,9 @@ class Controller_bareme extends Controller {
         $resultCheck = null;
 
         if (isset($_POST['sub'])) {
+            $verifFile = preg_match('/^[A-Za-z0-9\-_]+\.mar$/', $_FILES['file']['name']);
+            // si on est en mode create on vérifie quoi qu'il arrive et si on est en mode edit on vérifie seulement si le nom n'est pas vide (permet de ne pas être obligé de mettre un fichier alors qu'on je veut pas le modifier) 
+            // if ((!$mode && $verifFile) || ($mode && (isset($_FILE['file']['name']) ? $verifFile : true))) {
             if (preg_match('/^[A-Za-z0-9\-_]+\.mar$/', $_FILES['file']['name'])) {
                 $resultCheck = checkData($_POST);
 
@@ -100,14 +103,15 @@ class Controller_bareme extends Controller {
                         if (!is_dir($projectName)) mkdir($projectName);
 
                         if (is_dir($projectName)) {
-                            if (!$mode)
+                            if (!$mode) // si on est en mode create
                                 file_put_contents($projectListName, $resultCheck['TP-name']."\n", FILE_APPEND);
                             file_put_contents($projectName.'/.bareme.json', $bareme);
                             file_put_contents($projectName.'/.requetes.json', $request);
-                            move_uploaded_file($_FILES['file']['tmp_name'], $projectName.'/'.$resultCheck['TP-name'].'.mar');
+                            if (isset($_FILE['file']))
+                                move_uploaded_file($_FILES['file']['tmp_name'], $projectName.'/'.$resultCheck['TP-name'].'.mar');
                             copy($idSsh, $projectName.'/.id_rsa_marionnet');
 
-                            $ok = $mode ? 'Le TP .bareme à été modifié avec succès' : 'Le TP .bareme à été ajouté avec succès'; 
+                            $ok = $mode ? 'Le TP .bareme à été modifié avec succès ' : 'Le TP .bareme à été ajouté avec succès '; 
                             $form = '?controller=bareme&action=create';
                             $data = [
                                 'ok' => $ok,
