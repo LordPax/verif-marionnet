@@ -107,9 +107,9 @@ class Controller_bareme extends Controller {
                                 file_put_contents($projectListName, $resultCheck['TP-name']."\n", FILE_APPEND);
                             file_put_contents($projectName.'/.bareme.json', $bareme);
                             file_put_contents($projectName.'/.requetes.json', $request);
-                            if (isset($_FILE['file']))
-                                move_uploaded_file($_FILES['file']['tmp_name'], $projectName.'/'.$resultCheck['TP-name'].'.mar');
-                            copy($idSsh, $projectName.'/.id_rsa_marionnet');
+                            // if (isset($_FILE['file']))
+                            move_uploaded_file($_FILES['file']['tmp_name'], $projectName.'/'.$resultCheck['TP-name'].'.mar');
+                            // copy($idSsh, $projectName.'/.id_rsa_marionnet');
 
                             $ok = $mode ? 'Le TP .bareme à été modifié avec succès ' : 'Le TP .bareme à été ajouté avec succès '; 
                             $form = '?controller=bareme&action=create';

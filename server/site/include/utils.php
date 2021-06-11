@@ -4,11 +4,11 @@ function e(string $val):string {
     return htmlspecialchars($val);
 }
 
-function useIfExist($data, string $key = null):string {
+function useIfExist($data, string $key = null, $default = ''):string {
     if ($key !== null)
-        return isset($data[$key]) ? $data[$key] : '';
+        return isset($data[$key]) ? $data[$key] : $default;
     else
-        return isset($data) ? $data : '';
+        return isset($data) ? $data : $default;
 }
 
 function select(array $data, string $key, string $comp): string {

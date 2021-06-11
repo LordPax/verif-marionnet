@@ -4,7 +4,7 @@
 // $loginTemp = 'lordpax';
 // $passTemp = 'azerty';
 
-$racine = 'http://www-info.iutv.univ-paris13.fr/';
+$racine = 'https://www-info.iutv.univ-paris13.fr/';
 // $racine = 'http://localhost/';
 //
 // $domain = $racine.'/~gauthier/site/';
