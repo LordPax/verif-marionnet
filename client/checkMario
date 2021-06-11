@@ -5,7 +5,7 @@
 export TEXTDOMAIN="verifMario"
 distrib=""
 
-serverUrl="https://www-info.iutv.univ-paris13.fr/verifMario.d"
+serverUrl="https://www-info.iutv.univ-paris13.fr/verifMario.d/"
 serverPOST="$serverUrl/.eval.php" # url ou envoyer la requete
 # serverPOST="http://192.168.1.24/server/.eval.php"
 
@@ -13,7 +13,7 @@ packages="curl ssh jq yad"
 projectFile="exerciceTP.mar"
 requestName=".requetes.json"
 idSsh=".id_rsa_marionnet"
-file="$requestName $idSsh"
+file="$idSsh"
 prefixDir="exo"
 timing=1200 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4, $5; fflush()}'
@@ -304,7 +304,7 @@ function inputText() {
         read -p $"Enter exercise name : " projectName
         projectFile="${projectName}.mar"
     done
-    file="$projectFile $file"
+    file="$projectName/$projectFile $projectName/$requestName $file"
 }
 
 function inputGraph() {
@@ -346,7 +346,7 @@ function inputGraph() {
                 inputGraph
             fi
         fi
-        file="$projectFile $file"
+        file="$projectName/$projectFile $projectName/$requestName $file"
     else
         exitFunc 0
     fi
@@ -395,7 +395,9 @@ function getMarionnetFile() {
     fi
 
     for f in $file; do
-        curl -s $serverUrl/$projectName/$f -o $TMPFILE
+        curl -s $serverUrl/$f -o $TMPFILE
+        f=$(echo $f | awk -F '/' '{print $NF}')
+
         if grep '404 Not Found' $TMPFILE &> /dev/null; then
             echo_err $"file $f does not exist"
             exitFunc 1
