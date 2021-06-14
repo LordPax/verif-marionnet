@@ -25,11 +25,11 @@
         </a>
         <form action="<?=$form?>" method="post" enctype="multipart/form-data">
             <div class="field">
-                <!-- <label for="TP-name">nom du TP</label> -->
+                <label for="TP-name">nom du TP</label>
                 <input value="<?= isset($TPname) ? $TPname : ''?>"type="text" name="TP-name" id="TP-name" class="txt-field" placeholder="nom du TP">
             </div>
             <div class="field">
-                <!-- <label for="tolerance">tolerance</label> -->
+                <label for="tolerance">tolerance</label>
                 <input value="<?= isset($tolerance) ? $tolerance : ''?>" type="text" name="tolerance" id="telorance" class="txt-field" placeholder="tolerance (tolerance)">
             </div>
             <div class="field">

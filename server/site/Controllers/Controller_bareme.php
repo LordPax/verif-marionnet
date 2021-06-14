@@ -16,6 +16,9 @@ class Controller_bareme extends Controller {
         require_once 'Views/pattern_request.php';
 
         $projectList = preg_split('/\s+/', file_get_contents($projectListName));
+        $projectList = array_filter($projectList, function($elem) {
+            return preg_match('%^'.phpCAS::getUser().'/.+$%', $elem);
+        });
 
         $this->render('choice', [
             'title' => 'Menu',
@@ -86,7 +89,7 @@ class Controller_bareme extends Controller {
         $resultCheck = null;
 
         if (isset($_POST['sub'])) {
-            $verifFile = preg_match('/^[A-Za-z0-9\-_]+\.mar$/', $_FILES['file']['name']);
+            /* $verifFile = preg_match('/^[A-Za-z0-9\-_]+\.mar$/', $_FILES['file']['name']); */
             // si on est en mode create on vérifie quoi qu'il arrive et si on est en mode edit on vérifie seulement si le nom n'est pas vide (permet de ne pas être obligé de mettre un fichier alors qu'on je veut pas le modifier) 
             // if ((!$mode && $verifFile) || ($mode && (isset($_FILE['file']['name']) ? $verifFile : true))) {
             if (preg_match('/^[A-Za-z0-9\-_]+\.mar$/', $_FILES['file']['name'])) {
@@ -94,22 +97,23 @@ class Controller_bareme extends Controller {
 
                 if (gettype($resultCheck) === 'array') {
                     $projectList = preg_split('/\s+/', file_get_contents($projectListName));
+                    $TPname = $mode ? $resultCheck['TP-name'] : $username.'/'.$resultCheck['TP-name']; 
+                    $projectName = $projectDir.'/'.$TPname.'/';
+                    $marFile = explode('/', $TPname)[1].'.mar';
 
-                    if (in_array($resultCheck['TP-name'], $projectList) === $mode) {
+                    if (in_array($TPname, $projectList) === $mode) {
                         $bareme = data2json($resultCheck);
                         $request = extractRequestFromJson($bareme);
-                        $projectName = $projectDir.'/'.$resultCheck['TP-name'].'/';
 
                         if (!is_dir($projectName)) mkdir($projectName);
 
                         if (is_dir($projectName)) {
                             if (!$mode) // si on est en mode create
-                                file_put_contents($projectListName, $resultCheck['TP-name']."\n", FILE_APPEND);
+                                file_put_contents($projectListName, $TPname."\n", FILE_APPEND);
                             file_put_contents($projectName.'/.bareme.json', $bareme);
                             file_put_contents($projectName.'/.requetes.json', $request);
                             // if (isset($_FILE['file']))
-                            move_uploaded_file($_FILES['file']['tmp_name'], $projectName.'/'.$resultCheck['TP-name'].'.mar');
-                            // copy($idSsh, $projectName.'/.id_rsa_marionnet');
+                            move_uploaded_file($_FILES['file']['tmp_name'], $projectName.'/'.$marFile);
 
                             $ok = $mode ? 'Le TP .bareme à été modifié avec succès ' : 'Le TP .bareme à été ajouté avec succès '; 
                             $form = '?controller=bareme&action=create';
@@ -129,6 +133,7 @@ class Controller_bareme extends Controller {
                         }
                     }
                     else {
+                        /* echo $projectName; */
                         $error = $mode ? 'Le TP '.$resultCheck['TP-name'].' n\'existe pas' : 'Le TP '.$resultCheck['TP-name'].' existe déjà'; 
                         $form = $mode ? '?controller=bareme&action=edit' : '?controller=bareme&action=create';
                         $data = [
