@@ -10,20 +10,15 @@ class Controller_home extends Controller {
     }
 
     public function action_default() {
-        require 'include/config.php';
-        
-        // phpCAS::setDebug();
-        // phpCAS::setVerbose(true);
+        require_once 'include/config.php';
 
-        phpCAS::client(CAS_VERSION_2_0, $cas_host, $cas_port, $cas_context, true);
-        phpCAS::setNoCasServerValidation();
-        phpCAS::forceAuthentication();
+        // $data = [
+        //     'title' => 'Home',
+        //     'name' => phpCAS::getUser()
+        // ];
+        // $this->render('home', $data);
 
-        $data = [
-            'title' => 'Home',
-            'name' => phpCAS::getUser()
-        ];
-        $this->render('home', $data);
+        header('Location: '.$domain.'?controller=bareme');
     }
 }
 ?>

@@ -1,8 +1,145 @@
 body {
     margin: 0;
     padding: 0;
+    background-color: #EFEFEF;
+    font-family: 'Source Sans Pro', sans-serif;
+    font-weight: 300;
+    color: #333;
+    font-size: 15px;
+    line-height: 17px;
 }
 
-.auth input {
+label {
     display: block;
+}
+
+/* .combined-filed {
+    display : flex;
+} */
+
+.indent {
+    margin-left: 20px;
+}
+
+.request, .response {
+    /* border : 1px solide #555555; */
+    /* background-color: #efefef; */
+    margin-top : 10px;
+    border-left: 2px solid #A7A7A7;
+    padding-left: 5px;
+}
+
+.msg-err {
+    background-color: #FFF;
+    border: 1px solid #ff4545;
+    border-radius: 3px;
+    color: #ff4545;
+    font-weight: 400;
+    font-size: 20px;
+    margin-top: 5px;
+}
+
+.msg-ok {
+    background-color: #FFF;
+    border: 1px solid #6a8ce7;
+    border-radius: 3px;
+    color: #6a8ce7;
+    font-weight: 400;
+    font-size: 20px;
+    margin-top: 5px;
+}
+
+.msg-content {
+    padding: 7px;
+    margin: 0;
+}
+
+.msg-close {
+    float: right;
+    background-color: #FFF;
+    color:#ff4545;
+    border: 0;
+}
+
+.section-header {
+    padding-top: 7px;
+    padding-bottom: 7px;
+    /* border-bottom : 1px solid #c4c4c4; */
+}
+
+.section-name {
+    font-weight: 400;
+    font-size: 20px;
+}
+
+.bg{
+    background-color: #FFF;
+    width: 800px;
+    padding : 10px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.button, button, select {
+    padding: 5px;
+    border-radius: 2px;
+}
+
+.add-btn {
+    border: 1px solid #6a8ce7;
+    background-color: #6a8ce7;
+    color: #FFF;
+    float : right;
+}
+
+.sub-btn {
+    margin-top: 5px;
+    border: 1px solid #6a8ce7;
+    background-color: #6a8ce7;
+    color: #FFF;
+}
+
+.more-btn, .suppr-btn {
+    border: 1px solid #A7A7A7;
+    background-color: #FFF;
+    color: #333;
+    float : right;
+    margin-left: 5px;
+    margin-top: -5px;
+}
+
+select {
+    border: 1px solid #A7A7A7;
+    background-color: #FFF;
+    color: #333;
+}
+
+.txt-field {
+    display: block;
+    width: 98%;
+    margin-bottom: 10px;
+    padding: 5px;
+    /* box-shadow: 0 0 5px -2px gray inset; */
+    /* border: 1px solid gray; */
+    border:0;
+    border-bottom: 2px solid #6a8ce7;
+    background-color: #FFF;
+    /* border-radius: 3px; */
+}
+.combined {
+    width : 80%;
+    float : right;
+}
+
+@font-face {
+    font-family : 'Source Sans Pro';
+    font-style : normal;
+    font-weight : 300;
+    src : local('Source Sans Pro Light'), local('SourceSansPro-Light'), url(../fonts/source_sans_pro_300.ttf) format('truetype');
+}
+@font-face {
+    font-family : 'Source Sans Pro';
+    font-style : normal;
+    font-weight : 400;
+    src : local('Source Sans Pro'), local('SourceSansPro-Regular'), url(../fonts/source_sans_pro_400.ttf) format('truetype');
 }

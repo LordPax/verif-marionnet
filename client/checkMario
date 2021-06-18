@@ -5,7 +5,7 @@
 export TEXTDOMAIN="verifMario"
 distrib=""
 
-serverUrl="https://www-info.iutv.univ-paris13.fr/verifMario.d"
+serverUrl="https://www-info.iutv.univ-paris13.fr/verifMario.d/"
 serverPOST="$serverUrl/.eval.php" # url ou envoyer la requete
 # serverPOST="http://192.168.1.24/server/.eval.php"
 
@@ -13,7 +13,7 @@ packages="curl ssh jq yad"
 projectFile="exerciceTP.mar"
 requestName=".requetes.json"
 idSsh=".id_rsa_marionnet"
-file="$requestName $idSsh"
+file="$idSsh"
 prefixDir="exo"
 timing=1200 # temps en seconde
 PARSER='OFS="\n" {print $1, $2, $3, $4, $5; fflush()}'
@@ -302,9 +302,11 @@ function inputText() {
     fi
     while [ "A$projectName" = "A" ]; do
         read -p $"Enter exercise name : " projectName
-        projectFile="${projectName}.mar"
+
+        projectFile="$(echo $projectName | cut -d '/' -f 2).mar"
+        # projectFile="${projectName}.mar"
     done
-    file="$projectFile $file"
+    file="$projectName/$projectFile $projectName/$requestName $file"
 }
 
 function inputGraph() {
@@ -332,7 +334,7 @@ function inputGraph() {
                 projectName=$(echo $output | cut -d '|' -f 1)
                 firstName=$(echo $output | cut -d '|' -f 2)
                 name=$(echo $output | cut -d '|' -f 3)
-                projectFile="${projectName}.mar"
+                # projectFile="${projectName}.mar"
             else
                 echo_err $"All field must be completed"
                 inputGraph
@@ -340,13 +342,14 @@ function inputGraph() {
         else
             if echo $output | grep -E ".+\|" &> /dev/null; then
                 projectName=$(echo $output | cut -d '|' -f 1)
-                projectFile="${projectName}.mar"
+                # projectFile="${projectName}.mar"
             else
                 echo_err $"All field must be completed"
                 inputGraph
             fi
         fi
-        file="$projectFile $file"
+        projectFile="$(echo $projectName | cut -d '/' -f 2).mar"
+        file="$projectName/$projectFile $projectName/$requestName $file"
     else
         exitFunc 0
     fi
@@ -385,7 +388,7 @@ function launchMarionnet() {
 
 function getMarionnetFile() {
     if [ ! -d $projectName ]; then
-        mkdir $projectName
+        mkdir -p $projectName
     fi
     
     if curl -s $serverUrl/$projectName/ | grep '404 Not Found' &> /dev/null; then
@@ -395,7 +398,9 @@ function getMarionnetFile() {
     fi
 
     for f in $file; do
-        curl -s $serverUrl/$projectName/$f -o $TMPFILE
+        curl -s $serverUrl/$f -o $TMPFILE
+        f=$(echo $f | awk -F '/' '{print $NF}')
+
         if grep '404 Not Found' $TMPFILE &> /dev/null; then
             echo_err $"file $f does not exist"
             exitFunc 1
@@ -511,6 +516,7 @@ function getDataGraph() {
     local i=1
     while read line ; do
         data[$i]=$line
+        echo_debug "$i : ${dataRequest[$i,1]} : ${dataRequest[$i,2]} : $line" err
         i=$((i + 1))
     done < $TMPBUFF
     echo -n "" > $TMPBUFF
